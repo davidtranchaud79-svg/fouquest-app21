@@ -1,4 +1,4 @@
-// Fouquet’s Joy Suite – v14.9 (Gold Motion Premium Sync)
+// Fouquet’s Joy Suite – v14.9.2 (Gold Motion Clean Edition)
 export const API_URL = localStorage.getItem('API_BASE') || "https://script.google.com/macros/s/AKfycbzvkGlQiIzsfgxGXrem_qGrrI6QmBDe3Zw0G1bHeIA8CBTtuJEeG1_xDbFaiKYzt8hHDg/exec";
 
 const qs = (s, r=document) => r.querySelector(s);
@@ -122,83 +122,89 @@ function mountDashboard(){
   }
 }
 
-// ------------- Zones dynamiques depuis Sheets -------------
-// Charge les zones depuis Sheets et les insère dans le <select>
-async function loadZones(selectId){
-  const sel = document.getElementById(selectId);
-  if(!sel) return;
-
-  // Affiche un indicateur pendant le chargement
-  sel.innerHTML = '<option>Chargement...</option>';
-  const voyant = document.querySelector(`#${selectId}-status`);
-  if(voyant) voyant.textContent = '🟠';
-
-  try {
-    const res = await fetch(`${API_URL}?action=zonesList`);
-    const data = await res.json();
-
-    if (data.status === 'success') {
-      sel.innerHTML = data.zones.map(z => `<option value="${z}">${z}</option>`).join('');
-      if(voyant) voyant.textContent = '🟢';
-    } else {
-      sel.innerHTML = '<option>Erreur de chargement</option>';
-      if(voyant) voyant.textContent = '🔴';
-    }
-  } catch (e) {
-    sel.innerHTML = '<option>Hors-ligne</option>';
-    if(voyant) voyant.textContent = '🔴';
-  }
-}
-
 // ------------- Pertes -------------
 function mountPertes(){
-  loadZones('pertesZone');
-  qs('#btnSavePerte').addEventListener('click', async ()=>{
+  const btnSave = qs('#btnSavePerte');
+  const btnReset = qs('#btnResetPerte');
+  if (!btnSave) return;
+
+  btnSave.addEventListener('click', async ()=>{
     const payload = {
-      action:'pertesAdd',
-      produit: qs('#pertesProduit').value,
-      qte: qs('#pertesQte').value,
-      unite: qs('#pertesUnite').value,
-      motif: qs('#pertesMotif').value,
-      zone: qs('#pertesZone').value,
-      comment: qs('#pertesComment').value
+      action: 'pertesAdd',
+      produit: qs('#pertesProduit')?.value || '',
+      qte: qs('#pertesQte')?.value || '',
+      unite: qs('#pertesUnite')?.value || '',
+      motif: qs('#pertesMotif')?.value || '',
+      comment: qs('#pertesComment')?.value || ''
     };
-    const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).then(r=>r.json()).catch(()=>({status:'error'}));
-    alert(res.status==='success' ? 'Perte enregistrée.' : ('Erreur: '+(res.message||'inconnue')));
+    if(!payload.produit || !payload.qte){
+      alert('⚠️ Produit et quantité sont requis.');
+      return;
+    }
+
+    console.log("📦 Envoi des pertes:", payload);
+    const res = await fetch(API_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    }).then(r=>r.json()).catch(e=>({status:'error', message:e.message}));
+
+    alert(res.status==='success' ? '✅ Perte enregistrée.' : ('❌ Erreur: '+(res.message||'inconnue')));
   });
-  qs('#btnResetPerte').addEventListener('click', ()=>{
-    ['pertesProduit','pertesQte','pertesUnite','pertesMotif','pertesZone','pertesComment'].forEach(id=>{ const el=qs('#'+id); if(el) el.value=''; });
+
+  btnReset.addEventListener('click', ()=>{
+    ['pertesProduit','pertesQte','pertesUnite','pertesMotif','pertesComment']
+      .forEach(id=>{ const el=qs('#'+id); if(el) el.value=''; });
   });
 }
 
 // ------------- Inventaire journalier -------------
 function mountInvJ(){
-  loadZones('invjZone');
-  qs('#btnSaveInvJ').addEventListener('click', async ()=>{
+  const btnSave = qs('#btnSaveInvJ');
+  const btnReset = qs('#btnResetInvJ');
+  if (!btnSave) return;
+
+  btnSave.addEventListener('click', async ()=>{
     const payload = {
       action:'inventaireJournalier',
-      produit: qs('#invjProduit').value,
-      qte: qs('#invjQte').value,
-      unite: qs('#invjUnite').value,
-      zone: qs('#invjZone').value
+      produit: qs('#invjProduit')?.value || '',
+      qte: qs('#invjQte')?.value || '',
+      unite: qs('#invjUnite')?.value || ''
     };
-    const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).then(r=>r.json()).catch(()=>({status:'error'}));
-    alert(res.status==='success' ? 'Ajustement enregistré.' : ('Erreur: '+(res.message||'inconnue')));
+    if(!payload.produit || !payload.qte){
+      alert('⚠️ Produit et quantité sont requis.');
+      return;
+    }
+
+    console.log("📦 Envoi inventaire journalier:", payload);
+    const res = await fetch(API_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    }).then(r=>r.json()).catch(e=>({status:'error', message:e.message}));
+
+    alert(res.status==='success' ? '✅ Inventaire enregistré.' : ('❌ Erreur: '+(res.message||'inconnue')));
   });
-  qs('#btnResetInvJ').addEventListener('click', ()=>{
-    ['invjProduit','invjQte','invjUnite','invjZone'].forEach(id=>{ const el=qs('#'+id); if(el) el.value=''; });
+
+  btnReset.addEventListener('click', ()=>{
+    ['invjProduit','invjQte','invjUnite'].forEach(id=>{ const el=qs('#'+id); if(el) el.value=''; });
   });
 }
 
 // ------------- Inventaire mensuel -------------
 function mountInvM(){
+  const btnGen = qs('#btnInvmGenerate');
+  const btnSave = qs('#btnInvmSave');
+  const btnReset = qs('#btnInvmReset');
   loadZones('invmZone');
-  qs('#btnInvmGenerate').addEventListener('click', async ()=>{
+
+  btnGen?.addEventListener('click', async ()=>{
     const payload = { action:'createInventaireMensuel', zone: qs('#invmZone').value, mois: qs('#invmMois').value };
     const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).then(r=>r.json()).catch(()=>({status:'error'}));
-    alert(res.status==='success' ? 'Feuille générée.' : 'Erreur de génération.');
+    alert(res.status==='success' ? '📄 Feuille générée.' : '❌ Erreur de génération.');
   });
-  qs('#btnInvmSave').addEventListener('click', async ()=>{
+
+  btnSave?.addEventListener('click', async ()=>{
     const payload = {
       action:'saveInventaireMensuel',
       zone: qs('#invmZone').value,
@@ -209,14 +215,15 @@ function mountInvM(){
       commentaires: qs('#invmComment').value
     };
     const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).then(r=>r.json()).catch(()=>({status:'error'}));
-    alert(res.status==='success' ? 'Enregistré sur la feuille.' : 'Erreur d’enregistrement.');
+    alert(res.status==='success' ? '💾 Enregistré sur la feuille.' : '❌ Erreur d’enregistrement.');
   });
-  qs('#btnInvmReset').addEventListener('click', ()=>{
+
+  btnReset?.addEventListener('click', ()=>{
     ['invmMois','invmProduit','invmQte','invmUnite','invmComment'].forEach(id=>{ const el=qs('#'+id); if(el) el.value=''; });
   });
 }
 
-// ------------- Recettes (amélioré visuel) -------------
+// ------------- Recettes -------------
 async function loadRecettesListe(){
   const res = await fetch(`${API_URL}?action=getRecettes`).then(r=>r.json()).catch(()=>({status:'error'}));
   const list = qs('#recettesList'); const search = qs('#recetteSearch'); let all = [];
