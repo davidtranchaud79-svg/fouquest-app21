@@ -1,5 +1,5 @@
 // Fouquet’s Joy Suite – v14.4 Frontend (Active Sync)
-export const API_URL = localStorage.getItem('API_BASE') || "https://script.google.com/macros/s/TON_DEPLOIEMENT/exec";
+export const API_URL = localStorage.getItem('API_BASE') || "https://script.google.com/macros/s/AKfycbzIyeY7af3wFxGQXUK7R6ZbEzprVvkxkKIsaPovGkx_DabIchP2Vi2aDZCCEhyonHL_wA/exec";
 
 const qs = (s, r=document) => r.querySelector(s);
 const qsa = (s, r=document) => [...r.querySelectorAll(s)];
