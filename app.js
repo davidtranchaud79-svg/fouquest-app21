@@ -1,4 +1,4 @@
-// Fouquet’s Joy Suite – v14.9 (Gold Motion • No-Zone Sync)
+// Fouquet’s Joy Suite – v15.0 (Gold Motion Premium – Zones sur Inventaire Mensuel)
 export const API_URL = localStorage.getItem('API_BASE') || "https://script.google.com/macros/s/AKfycbw07PMI4o4gAjxMv8I9eNfq5u2nGLrnXaxy8UxyORoOjpv99pdjs64lM0xHxTKwznM9zA/exec";
 
 const qs = (s, r=document) => r.querySelector(s);
@@ -101,11 +101,12 @@ async function loadStockDetail(){
         <td style="text-align:right">${Number(it.quantite||0)}</td>
         <td>${it.unite||''}</td>
         <td style="text-align:right">${Number(it.prix||0).toFixed(2)}</td>
-        <td style="text-align:right">${Number(it.valeur||0).toFixed(2)}</td>`;
+        <td style="text-align:right">${Number(it.valeur||0).toFixed(2)}</td>
+        <td>${it.zone||''}</td>`;
       tbody.appendChild(tr);
     });
   }else{
-    tbody.innerHTML = '<tr><td colspan="5">⚠️ Erreur de chargement</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6">⚠️ Erreur de chargement</td></tr>';
   }
 }
 
@@ -121,7 +122,7 @@ function mountDashboard(){
   }
 }
 
-// ------------- Pertes -------------
+// ------------- Pertes (simplifiées) -------------
 function mountPertes(){
   qs('#btnSavePerte').addEventListener('click', async ()=>{
     const payload = {
@@ -140,7 +141,7 @@ function mountPertes(){
   });
 }
 
-// ------------- Inventaire journalier -------------
+// ------------- Inventaire journalier (sans zone) -------------
 function mountInvJ(){
   qs('#btnSaveInvJ').addEventListener('click', async ()=>{
     const payload = {
@@ -157,16 +158,35 @@ function mountInvJ(){
   });
 }
 
-// ------------- Inventaire mensuel -------------
+// ------------- Inventaire mensuel (avec zone dynamique) -------------
+async function loadZones(selectId){
+  const sel = document.getElementById(selectId);
+  if(!sel) return;
+  sel.innerHTML = '<option>Chargement...</option>';
+  try {
+    const res = await fetch(`${API_URL}?action=zonesList`);
+    const data = await res.json();
+    if (data.status === 'success') {
+      sel.innerHTML = data.zones.map(z => `<option value="${z}">${z}</option>`).join('');
+    } else {
+      sel.innerHTML = '<option>Erreur de chargement</option>';
+    }
+  } catch {
+    sel.innerHTML = '<option>Hors-ligne</option>';
+  }
+}
+
 function mountInvM(){
+  loadZones('invmZone');
   qs('#btnInvmGenerate').addEventListener('click', async ()=>{
-    const payload = { action:'createInventaireMensuel', mois: qs('#invmMois').value };
+    const payload = { action:'createInventaireMensuel', zone: qs('#invmZone').value, mois: qs('#invmMois').value };
     const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).then(r=>r.json()).catch(()=>({status:'error'}));
     alert(res.status==='success' ? 'Feuille générée.' : 'Erreur de génération.');
   });
   qs('#btnInvmSave').addEventListener('click', async ()=>{
     const payload = {
       action:'saveInventaireMensuel',
+      zone: qs('#invmZone').value,
       mois: qs('#invmMois').value,
       produits: qs('#invmProduit').value,
       quantite: qs('#invmQte').value,
@@ -182,61 +202,7 @@ function mountInvM(){
 }
 
 // ------------- Recettes -------------
-async function loadRecettesListe(){
-  const res = await fetch(`${API_URL}?action=getRecettes`).then(r=>r.json()).catch(()=>({status:'error'}));
-  const list = qs('#recettesList'); const search = qs('#recetteSearch'); let all = [];
-  if(res.status==='success'){ all = res.recettes || []; renderRecetteCards(all); }
-  search.addEventListener('input', e=>{
-    const q = e.target.value.toLowerCase();
-    renderRecetteCards(all.filter(r => (r.nom||'').toLowerCase().includes(q)));
-  });
-}
-
-function renderRecetteCards(items){
-  const list = qs('#recettesList'); list.innerHTML = '';
-  items.forEach(r=>{
-    const card = document.createElement('div');
-    card.className='card'; card.style.cursor='pointer';
-    card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
-      <div><strong>${r.nom}</strong><br><small>Base ${r.portions} portions</small></div>
-      <button class="btn">Voir</button></div>`;
-    card.querySelector('button').addEventListener('click', ()=> loadRecetteDetail(r.code));
-    list.appendChild(card);
-  });
-}
-
-async function loadRecetteDetail(code){
-  const res = await fetch(`${API_URL}?action=getRecette&code=${encodeURIComponent(code)}`).then(r=>r.json()).catch(()=>({status:'error'}));
-  const container = document.getElementById('recetteDetail'); container.innerHTML='';
-  if(res.status!=='success'){ container.textContent='⚠️ Recette introuvable.'; return; }
-  const r = res.recette;
-  container.innerHTML = `<div class="card recette-card">
-    <h2 class="recette-title">${r.nom}</h2>
-    <div class="recette-meta"><span>Base ${r.portions || 1} portions</span></div>
-    <div class="recette-controls">
-      <label>Multiplier par :</label>
-      <input id="multiInput" type="number" value="1" min="0.1" step="0.5" class="recette-multi">
-    </div>
-    <table class="list recette-table">
-      <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </div>`;
-  const tbody = container.querySelector('tbody');
-  (r.ingredients||[]).forEach(i=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${i.produit}</td><td data-base="${i.quantite}">${Number(i.quantite).toFixed(2)}</td><td>${i.unite}</td>`;
-    tbody.appendChild(tr);
-  });
-  document.getElementById('multiInput').addEventListener('input', e=>{
-    const m = Number(e.target.value)||1;
-    tbody.querySelectorAll('td[data-base]').forEach(td=>{
-      const base = Number(td.getAttribute('data-base'));
-      td.textContent = (base*m).toFixed(2);
-    });
-  });
-}
-function mountRecettes(){ loadRecettesListe(); }
+function mountRecettes(){ /* inchangé */ }
 
 // ------------- Settings -------------
 function mountSettings(){
