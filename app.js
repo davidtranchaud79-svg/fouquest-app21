@@ -167,10 +167,12 @@ function mountInvJ(){
   btnSave.addEventListener('click', async ()=>{
     const payload = {
       action:'inventaireJournalier',
-      produit: qs('#invjProduit')?.value || '',
-      qte: qs('#invjQte')?.value || '',
-      unite: qs('#invjUnite')?.value || ''
+      type: qs('#invjType')?.value || 'entree',   // ✅ Nouveau champ ajouté
+      produit: qs('#invjProduit').value,
+      qte: qs('#invjQte').value,
+      unite: qs('#invjUnite').value
     };
+
     if(!payload.produit || !payload.qte){
       alert('⚠️ Produit et quantité sont requis.');
       return;
@@ -187,7 +189,7 @@ function mountInvJ(){
   });
 
   btnReset.addEventListener('click', ()=>{
-    ['invjProduit','invjQte','invjUnite'].forEach(id=>{ const el=qs('#'+id); if(el) el.value=''; });
+    ['invjType','invjProduit','invjQte','invjUnite'].forEach(id=>{ const el=qs('#'+id); if(el) el.value=''; });
   });
 }
 
