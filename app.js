@@ -1,5 +1,5 @@
 // Fouquet’s Joy Suite – v14.9 (Gold Motion Premium Sync)
-export const API_URL = localStorage.getItem('API_BASE') || "https://script.google.com/macros/s/AKfycbwjEkgrduemmPEZhucb9oUPOPSf1MLKBThiLnT_m2ZMp3LhSpJ8hSgoZImZvNRCwlhUGg/exec";
+export const API_URL = localStorage.getItem('API_BASE') || "https://script.google.com/macros/s/AKfycbw07PMI4o4gAjxMv8I9eNfq5u2nGLrnXaxy8UxyORoOjpv99pdjs64lM0xHxTKwznM9zA/exec";
 
 const qs = (s, r=document) => r.querySelector(s);
 const qsa = (s, r=document) => [...r.querySelectorAll(s)];
