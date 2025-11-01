@@ -1,4 +1,4 @@
-// Fouquet’s Joy Suite – v14.4 Frontend (Active Sync)
+// Fouquet’s Joy Suite – v14.9 (Gold Motion Premium Sync)
 export const API_URL = localStorage.getItem('API_BASE') || "https://script.google.com/macros/s/AKfycbyKmvhhcwuXoGo202qh4GlYRdJwmyp9s9aab5FaVkqFYJ9a2d80QTDP3uT99MlMqxh7_w/exec";
 
 const qs = (s, r=document) => r.querySelector(s);
@@ -113,7 +113,6 @@ async function loadStockDetail(){
 function mountDashboard(){
   loadEtatStock();
   loadStockDetail();
-  // placeholders pertes (à relier à tes données réelles si besoin)
   const tbody = qs('#topPertes tbody');
   [['Saumon Label Rouge','6,2 kg','€ 148'],['Beurre AOP','3,0 kg','€ 96'],['Framboise','2,1 kg','€ 74']]
     .forEach(r => { const tr = document.createElement('tr'); r.forEach(c=>{const td=document.createElement('td');td.textContent=c;tr.appendChild(td)}); tbody.appendChild(tr); });
@@ -123,8 +122,25 @@ function mountDashboard(){
   }
 }
 
+// ------------- Zones dynamiques depuis Sheets -------------
+async function loadZones(selectId){
+  try{
+    const r = await fetch(`${API_URL}?action=zonesList`);
+    const d = await r.json();
+    const zones = (d.status==='success' && Array.isArray(d.zones)) ? d.zones : ['Garde-manger','Économat','Froid'];
+    const sel = document.getElementById(selectId);
+    if(sel) sel.innerHTML = zones.map(z=>`<option>${z}</option>`).join('');
+    return zones;
+  }catch(e){
+    const sel = document.getElementById(selectId);
+    if(sel) sel.innerHTML = ['Garde-manger','Économat','Froid'].map(z=>`<option>${z}</option>`).join('');
+    return ['Garde-manger','Économat','Froid'];
+  }
+}
+
 // ------------- Pertes -------------
 function mountPertes(){
+  loadZones('pertesZone');
   qs('#btnSavePerte').addEventListener('click', async ()=>{
     const payload = {
       action:'pertesAdd',
@@ -145,6 +161,7 @@ function mountPertes(){
 
 // ------------- Inventaire journalier -------------
 function mountInvJ(){
+  loadZones('invjZone');
   qs('#btnSaveInvJ').addEventListener('click', async ()=>{
     const payload = {
       action:'inventaireJournalier',
@@ -162,9 +179,8 @@ function mountInvJ(){
 }
 
 // ------------- Inventaire mensuel -------------
-async function loadZones(){ return ['Garde-manger','Économat','Froid']; }
 function mountInvM(){
-  loadZones().then(zs=>{ const sel = qs('#invmZone'); sel.innerHTML = zs.map(z=>`<option>${z}</option>`).join(''); });
+  loadZones('invmZone');
   qs('#btnInvmGenerate').addEventListener('click', async ()=>{
     const payload = { action:'createInventaireMensuel', zone: qs('#invmZone').value, mois: qs('#invmMois').value };
     const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).then(r=>r.json()).catch(()=>({status:'error'}));
@@ -188,7 +204,7 @@ function mountInvM(){
   });
 }
 
-// ------------- Recettes (consultatives) -------------
+// ------------- Recettes (amélioré visuel) -------------
 async function loadRecettesListe(){
   const res = await fetch(`${API_URL}?action=getRecettes`).then(r=>r.json()).catch(()=>({status:'error'}));
   const list = qs('#recettesList'); const search = qs('#recetteSearch'); let all = [];
@@ -198,6 +214,7 @@ async function loadRecettesListe(){
     renderRecetteCards(all.filter(r => (r.nom||'').toLowerCase().includes(q)));
   });
 }
+
 function renderRecetteCards(items){
   const list = qs('#recettesList'); list.innerHTML = '';
   items.forEach(r=>{
@@ -210,16 +227,20 @@ function renderRecetteCards(items){
     list.appendChild(card);
   });
 }
+
 async function loadRecetteDetail(code){
   const res = await fetch(`${API_URL}?action=getRecette&code=${encodeURIComponent(code)}`).then(r=>r.json()).catch(()=>({status:'error'}));
   const container = document.getElementById('recetteDetail'); container.innerHTML='';
   if(res.status!=='success'){ container.textContent='⚠️ Recette introuvable.'; return; }
   const r = res.recette;
-  container.innerHTML = `<div class="card">
-    <h3>${r.nom}</h3>
-    <label>Multiplier par :</label>
-    <input id="multiInput" type="number" value="1" min="0.1" step="0.5" style="width:70px;text-align:center;border-radius:6px;margin-left:8px;">
-    <table class="list" style="margin-top:10px">
+  container.innerHTML = `<div class="card recette-card">
+    <h2 class="recette-title">${r.nom}</h2>
+    <div class="recette-meta"><span>Base ${r.portions || 1} portions</span></div>
+    <div class="recette-controls">
+      <label>Multiplier par :</label>
+      <input id="multiInput" type="number" value="1" min="0.1" step="0.5" class="recette-multi">
+    </div>
+    <table class="list recette-table">
       <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Zone</th></tr></thead>
       <tbody></tbody>
     </table>
