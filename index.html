@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fouquet’s Joy Suite</title>
+  <meta name="theme-color" content="#5A0D0D"/>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/favicon.ico">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script defer src="app.js" type="module"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-badge">F</div>
+        <div>
+          <div style="font-weight:700">Fouquet’s Joy</div>
+          <div style="font-size:11px;color:#E9D7A8">Suite Gold Motion</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="badge">Manager</span>
+        <span id="syncBadge" class="status-badge offline">Hors ligne</span>
+        <button class="btn" id="btnSync">⇅ Synchroniser</button>
+      </div>
+    </div>
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-view="dashboard">📊 Dashboard</button>
+      <button class="tab" data-view="pertes">🗑️ Pertes</button>
+      <button class="tab" data-view="invj">📦 Inventaire journalier</button>
+      <button class="tab" data-view="invm">🏷️ Inventaire mensuel</button>
+      <button class="tab" data-view="recettes">🍽️ Recettes</button>
+      <button class="tab" data-view="settings">⚙️ Paramètres</button>
+    </div>
+  </header>
+
+  <main id="app" class="container"></main>
+
+  <footer class="bottom" style="height:68px"></footer>
+
+  <!-- Templates (identiques à v14.3; Dashboard inclut stock détaillé) -->
+  <template id="tpl-dashboard">
+    <section class="section">
+      <div class="grid-3">
+        <div class="card">
+          <div class="kpi-title">Valeur du stock</div>
+          <div class="kpi-value" id="kpiStock">—</div>
+          <div style="font-size:12px;color:#7a2020" id="kpiStockQte">—</div>
+        </div>
+        <div class="card"><div class="kpi-title">Pertes (mois)</div><div class="kpi-value" id="kpiPertes">—</div></div>
+        <div class="card"><div class="kpi-title">Alertes seuil</div><div class="kpi-value" id="kpiSeuils">—</div></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong>Top 10 pertes</strong><span style="font-size:11px;color:#7a2020">qté & valeur</span>
+        </div>
+        <table class="list" id="topPertes"><thead><tr><th>Produit</th><th>Qté</th><th>Valeur</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div class="card">
+        <strong>📋 État du stock courant</strong>
+        <table class="list" id="tableStockDetail">
+          <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Prix (€)</th><th>Valeur (€)</th><th>Zone</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <strong>Pertes – 7 jours</strong>
+        <canvas id="chartPertes" height="120"></canvas>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-pertes">
+    <section class="section">
+      <div class="card">
+        <h3 style="color:#7a2020;margin:0 0 8px 0">🗑️ Saisie des pertes</h3>
+        <div class="grid">
+          <div class="input-field input-icon">
+            <label>Produit</label><span>🧾</span>
+            <input list="produitsList" id="pertesProduit" placeholder="Choisir ou saisir un produit" />
+            <datalist id="produitsList"></datalist>
+            <div class="hint">Données depuis Sheets, saisie libre possible.</div>
+          </div>
+          <div class="input-field input-icon"><label>Quantité</label><span>⚖️</span><input id="pertesQte" placeholder="Ex. 1.20"/></div>
+          <div class="input-field input-icon"><label>Unité</label><span>🧪</span><input id="pertesUnite" placeholder="kg / L / pièce"/></div>
+          <div class="input-field input-icon"><label>Motif</label><span>🧯</span><input id="pertesMotif" placeholder="DLUO / Casse / Surcuisson"/></div>
+          <div class="input-field input-icon"><label>Zone</label><span>📦</span><input id="pertesZone" placeholder="Économat / Garde-manger"/></div>
+          <div class="input-field input-icon"><label>Commentaire</label><span>💬</span><input id="pertesComment" placeholder="Optionnel"/></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:10px">
+          <button class="btn" id="btnSavePerte">Enregistrer</button>
+          <button class="btn" id="btnResetPerte">Réinitialiser</button>
+        </div>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-invj">
+    <section class="section">
+      <div class="card">
+        <h3 style="color:#7a2020;margin:0 0 8px 0">📦 Inventaire journalier</h3>
+        <div class="grid">
+          <div class="input-field input-icon"><label>Produit</label><span>🧾</span><input list="produitsList" id="invjProduit" placeholder="Choisir ou saisir un produit" /></div>
+          <div class="input-field input-icon"><label>Quantité</label><span>⚖️</span><input id="invjQte" placeholder="Ex. 2.50" /></div>
+          <div class="input-field input-icon"><label>Unité</label><span>🧪</span><input id="invjUnite" placeholder="kg / L / pièce" /></div>
+          <div class="input-field input-icon"><label>Zone</label><span>📦</span><input id="invjZone" placeholder="Économat / Froid / Garde-manger" /></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:10px">
+          <button class="btn" id="btnSaveInvJ">💾 Enregistrer</button>
+          <button class="btn" id="btnResetInvJ">Réinitialiser</button>
+        </div>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-invm">
+    <section class="section">
+      <div class="card">
+        <h3 style="color:#7a2020;margin:0 0 8px 0">🏷️ Inventaire mensuel</h3>
+        <div class="grid">
+          <div class="input-field input-icon"><label>Zone</label><span>📦</span><select id="invmZone"></select></div>
+          <div class="input-field input-icon"><label>Mois concerné</label><span>📅</span><input type="month" id="invmMois" /></div>
+          <div class="input-field input-icon"><label>Produit</label><span>🧾</span><input id="invmProduit" placeholder="Nom du produit" /></div>
+          <div class="input-field input-icon"><label>Quantité</label><span>⚖️</span><input id="invmQte" placeholder="Ex. 5.00" /></div>
+          <div class="input-field input-icon"><label>Unité</label><span>🧪</span><input id="invmUnite" placeholder="kg / L / pièce" /></div>
+          <div class="input-field input-icon"><label>Commentaires</label><span>💬</span><input id="invmComment" placeholder="Notes supplémentaires" /></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+          <button class="btn" id="btnInvmGenerate">📄 Générer la feuille</button>
+          <button class="btn" id="btnInvmSave">💾 Enregistrer sur la feuille</button>
+          <button class="btn" id="btnInvmReset">Réinitialiser</button>
+        </div>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-recettes">
+    <section class="section">
+      <div class="card">
+        <h3 style="color:#7a2020;margin:0 0 8px 0">🍽️ Recettes</h3>
+        <div class="input-field input-icon" style="margin-bottom:10px">
+          <label>Recherche</label><span>🔎</span>
+          <input id="recetteSearch" placeholder="Rechercher une recette...">
+        </div>
+        <div id="recettesList" class="grid" style="margin-top:10px"></div>
+        <div id="recetteDetail" style="margin-top:20px"></div>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-settings">
+    <section class="section">
+      <div class="card">
+        <h3 style="color:#7a2020;margin:0 0 8px 0">⚙️ Paramètres</h3>
+        <div class="grid">
+          <div class="input-field input-icon"><label>Établissement</label><span>🏨</span><input id="setEtab" placeholder="Fouquet’s Joy"/></div>
+          <div class="input-field input-icon"><label>Fuseau horaire</label><span>🌍</span><select id="setTz"><option>Europe/Paris</option><option>Europe/Rome</option><option>America/New_York</option></select></div>
+          <div class="input-field input-icon"><label>Email Cost-Control</label><span>✉️</span><input id="setEmail" placeholder="costcontrol@fouquets.fr"/></div>
+          <div class="input-field input-icon"><label>Langue par défaut</label><span>🗣️</span><select id="setLang"><option value="fr">Français</option><option value="en">English</option><option value="it">Italiano</option><option value="es">Español</option></select></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:10px"><button class="btn" id="btnSetSave">💾 Enregistrer</button></div>
+      </div>
+    </section>
+  </template>
+</body>
+</html>
