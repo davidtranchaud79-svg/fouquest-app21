@@ -1,4 +1,4 @@
-// Fouquet’s Joy Suite – v14.9 (Gold Motion Premium Sync)
+// Fouquet’s Joy Suite – v14.9 (Gold Motion • No-Zone Sync)
 export const API_URL = localStorage.getItem('API_BASE') || "https://script.google.com/macros/s/AKfycbw07PMI4o4gAjxMv8I9eNfq5u2nGLrnXaxy8UxyORoOjpv99pdjs64lM0xHxTKwznM9zA/exec";
 
 const qs = (s, r=document) => r.querySelector(s);
@@ -101,12 +101,11 @@ async function loadStockDetail(){
         <td style="text-align:right">${Number(it.quantite||0)}</td>
         <td>${it.unite||''}</td>
         <td style="text-align:right">${Number(it.prix||0).toFixed(2)}</td>
-        <td style="text-align:right">${Number(it.valeur||0).toFixed(2)}</td>
-        <td>${it.zone||''}</td>`;
+        <td style="text-align:right">${Number(it.valeur||0).toFixed(2)}</td>`;
       tbody.appendChild(tr);
     });
   }else{
-    tbody.innerHTML = '<tr><td colspan="6">⚠️ Erreur de chargement</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5">⚠️ Erreur de chargement</td></tr>';
   }
 }
 
@@ -122,37 +121,8 @@ function mountDashboard(){
   }
 }
 
-// ------------- Zones dynamiques depuis Sheets -------------
-// Charge les zones depuis Sheets et les insère dans le <select>
-async function loadZones(selectId){
-  const sel = document.getElementById(selectId);
-  if(!sel) return;
-
-  // Affiche un indicateur pendant le chargement
-  sel.innerHTML = '<option>Chargement...</option>';
-  const voyant = document.querySelector(`#${selectId}-status`);
-  if(voyant) voyant.textContent = '🟠';
-
-  try {
-    const res = await fetch(`${API_URL}?action=zonesList`);
-    const data = await res.json();
-
-    if (data.status === 'success') {
-      sel.innerHTML = data.zones.map(z => `<option value="${z}">${z}</option>`).join('');
-      if(voyant) voyant.textContent = '🟢';
-    } else {
-      sel.innerHTML = '<option>Erreur de chargement</option>';
-      if(voyant) voyant.textContent = '🔴';
-    }
-  } catch (e) {
-    sel.innerHTML = '<option>Hors-ligne</option>';
-    if(voyant) voyant.textContent = '🔴';
-  }
-}
-
 // ------------- Pertes -------------
 function mountPertes(){
-  loadZones('pertesZone');
   qs('#btnSavePerte').addEventListener('click', async ()=>{
     const payload = {
       action:'pertesAdd',
@@ -160,48 +130,43 @@ function mountPertes(){
       qte: qs('#pertesQte').value,
       unite: qs('#pertesUnite').value,
       motif: qs('#pertesMotif').value,
-      zone: qs('#pertesZone').value,
       comment: qs('#pertesComment').value
     };
     const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).then(r=>r.json()).catch(()=>({status:'error'}));
     alert(res.status==='success' ? 'Perte enregistrée.' : ('Erreur: '+(res.message||'inconnue')));
   });
   qs('#btnResetPerte').addEventListener('click', ()=>{
-    ['pertesProduit','pertesQte','pertesUnite','pertesMotif','pertesZone','pertesComment'].forEach(id=>{ const el=qs('#'+id); if(el) el.value=''; });
+    ['pertesProduit','pertesQte','pertesUnite','pertesMotif','pertesComment'].forEach(id=>{ const el=qs('#'+id); if(el) el.value=''; });
   });
 }
 
 // ------------- Inventaire journalier -------------
 function mountInvJ(){
-  loadZones('invjZone');
   qs('#btnSaveInvJ').addEventListener('click', async ()=>{
     const payload = {
       action:'inventaireJournalier',
       produit: qs('#invjProduit').value,
       qte: qs('#invjQte').value,
-      unite: qs('#invjUnite').value,
-      zone: qs('#invjZone').value
+      unite: qs('#invjUnite').value
     };
     const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).then(r=>r.json()).catch(()=>({status:'error'}));
     alert(res.status==='success' ? 'Ajustement enregistré.' : ('Erreur: '+(res.message||'inconnue')));
   });
   qs('#btnResetInvJ').addEventListener('click', ()=>{
-    ['invjProduit','invjQte','invjUnite','invjZone'].forEach(id=>{ const el=qs('#'+id); if(el) el.value=''; });
+    ['invjProduit','invjQte','invjUnite'].forEach(id=>{ const el=qs('#'+id); if(el) el.value=''; });
   });
 }
 
 // ------------- Inventaire mensuel -------------
 function mountInvM(){
-  loadZones('invmZone');
   qs('#btnInvmGenerate').addEventListener('click', async ()=>{
-    const payload = { action:'createInventaireMensuel', zone: qs('#invmZone').value, mois: qs('#invmMois').value };
+    const payload = { action:'createInventaireMensuel', mois: qs('#invmMois').value };
     const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).then(r=>r.json()).catch(()=>({status:'error'}));
     alert(res.status==='success' ? 'Feuille générée.' : 'Erreur de génération.');
   });
   qs('#btnInvmSave').addEventListener('click', async ()=>{
     const payload = {
       action:'saveInventaireMensuel',
-      zone: qs('#invmZone').value,
       mois: qs('#invmMois').value,
       produits: qs('#invmProduit').value,
       quantite: qs('#invmQte').value,
@@ -216,7 +181,7 @@ function mountInvM(){
   });
 }
 
-// ------------- Recettes (amélioré visuel) -------------
+// ------------- Recettes -------------
 async function loadRecettesListe(){
   const res = await fetch(`${API_URL}?action=getRecettes`).then(r=>r.json()).catch(()=>({status:'error'}));
   const list = qs('#recettesList'); const search = qs('#recetteSearch'); let all = [];
@@ -253,14 +218,14 @@ async function loadRecetteDetail(code){
       <input id="multiInput" type="number" value="1" min="0.1" step="0.5" class="recette-multi">
     </div>
     <table class="list recette-table">
-      <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Zone</th></tr></thead>
+      <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th></tr></thead>
       <tbody></tbody>
     </table>
   </div>`;
   const tbody = container.querySelector('tbody');
   (r.ingredients||[]).forEach(i=>{
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${i.produit}</td><td data-base="${i.quantite}">${Number(i.quantite).toFixed(2)}</td><td>${i.unite}</td><td>${i.zone||''}</td>`;
+    tr.innerHTML = `<td>${i.produit}</td><td data-base="${i.quantite}">${Number(i.quantite).toFixed(2)}</td><td>${i.unite}</td>`;
     tbody.appendChild(tr);
   });
   document.getElementById('multiInput').addEventListener('input', e=>{
