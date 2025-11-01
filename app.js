@@ -123,18 +123,30 @@ function mountDashboard(){
 }
 
 // ------------- Zones dynamiques depuis Sheets -------------
+// Charge les zones depuis Sheets et les insère dans le <select>
 async function loadZones(selectId){
-  try{
-    const r = await fetch(`${API_URL}?action=zonesList`);
-    const d = await r.json();
-    const zones = (d.status==='success' && Array.isArray(d.zones)) ? d.zones : ['Garde-manger','Économat','Froid'];
-    const sel = document.getElementById(selectId);
-    if(sel) sel.innerHTML = zones.map(z=>`<option>${z}</option>`).join('');
-    return zones;
-  }catch(e){
-    const sel = document.getElementById(selectId);
-    if(sel) sel.innerHTML = ['Garde-manger','Économat','Froid'].map(z=>`<option>${z}</option>`).join('');
-    return ['Garde-manger','Économat','Froid'];
+  const sel = document.getElementById(selectId);
+  if(!sel) return;
+
+  // Affiche un indicateur pendant le chargement
+  sel.innerHTML = '<option>Chargement...</option>';
+  const voyant = document.querySelector(`#${selectId}-status`);
+  if(voyant) voyant.textContent = '🟠';
+
+  try {
+    const res = await fetch(`${API_URL}?action=zonesList`);
+    const data = await res.json();
+
+    if (data.status === 'success') {
+      sel.innerHTML = data.zones.map(z => `<option value="${z}">${z}</option>`).join('');
+      if(voyant) voyant.textContent = '🟢';
+    } else {
+      sel.innerHTML = '<option>Erreur de chargement</option>';
+      if(voyant) voyant.textContent = '🔴';
+    }
+  } catch (e) {
+    sel.innerHTML = '<option>Hors-ligne</option>';
+    if(voyant) voyant.textContent = '🔴';
   }
 }
 
