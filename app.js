@@ -1,5 +1,5 @@
-// Fouquet’s Joy Suite – v15.0 (Gold Motion Premium – Zones sur Inventaire Mensuel)
-export const API_URL = localStorage.getItem('API_BASE') || "https://script.google.com/macros/s/AKfycbw9YtrIwgaRg5nkaofUMRrPPmmvnVq7NFX3tCPM2aTIs46iGAOm0hOFkbjsoBIg9l7_Sg/exec";
+// Fouquet’s Joy Suite – v14.9 (Gold Motion Premium Sync)
+export const API_URL = localStorage.getItem('API_BASE') || "https://script.google.com/macros/s/AKfycbw07PMI4o4gAjxMv8I9eNfq5u2nGLrnXaxy8UxyORoOjpv99pdjs64lM0xHxTKwznM9zA/exec";
 
 const qs = (s, r=document) => r.querySelector(s);
 const qsa = (s, r=document) => [...r.querySelectorAll(s)];
@@ -122,8 +122,37 @@ function mountDashboard(){
   }
 }
 
-// ------------- Pertes (simplifiées) -------------
+// ------------- Zones dynamiques depuis Sheets -------------
+// Charge les zones depuis Sheets et les insère dans le <select>
+async function loadZones(selectId){
+  const sel = document.getElementById(selectId);
+  if(!sel) return;
+
+  // Affiche un indicateur pendant le chargement
+  sel.innerHTML = '<option>Chargement...</option>';
+  const voyant = document.querySelector(`#${selectId}-status`);
+  if(voyant) voyant.textContent = '🟠';
+
+  try {
+    const res = await fetch(`${API_URL}?action=zonesList`);
+    const data = await res.json();
+
+    if (data.status === 'success') {
+      sel.innerHTML = data.zones.map(z => `<option value="${z}">${z}</option>`).join('');
+      if(voyant) voyant.textContent = '🟢';
+    } else {
+      sel.innerHTML = '<option>Erreur de chargement</option>';
+      if(voyant) voyant.textContent = '🔴';
+    }
+  } catch (e) {
+    sel.innerHTML = '<option>Hors-ligne</option>';
+    if(voyant) voyant.textContent = '🔴';
+  }
+}
+
+// ------------- Pertes -------------
 function mountPertes(){
+  loadZones('pertesZone');
   qs('#btnSavePerte').addEventListener('click', async ()=>{
     const payload = {
       action:'pertesAdd',
@@ -131,51 +160,37 @@ function mountPertes(){
       qte: qs('#pertesQte').value,
       unite: qs('#pertesUnite').value,
       motif: qs('#pertesMotif').value,
+      zone: qs('#pertesZone').value,
       comment: qs('#pertesComment').value
     };
     const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).then(r=>r.json()).catch(()=>({status:'error'}));
     alert(res.status==='success' ? 'Perte enregistrée.' : ('Erreur: '+(res.message||'inconnue')));
   });
   qs('#btnResetPerte').addEventListener('click', ()=>{
-    ['pertesProduit','pertesQte','pertesUnite','pertesMotif','pertesComment'].forEach(id=>{ const el=qs('#'+id); if(el) el.value=''; });
+    ['pertesProduit','pertesQte','pertesUnite','pertesMotif','pertesZone','pertesComment'].forEach(id=>{ const el=qs('#'+id); if(el) el.value=''; });
   });
 }
 
-// ------------- Inventaire journalier (sans zone) -------------
+// ------------- Inventaire journalier -------------
 function mountInvJ(){
+  loadZones('invjZone');
   qs('#btnSaveInvJ').addEventListener('click', async ()=>{
     const payload = {
       action:'inventaireJournalier',
       produit: qs('#invjProduit').value,
       qte: qs('#invjQte').value,
-      unite: qs('#invjUnite').value
+      unite: qs('#invjUnite').value,
+      zone: qs('#invjZone').value
     };
     const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).then(r=>r.json()).catch(()=>({status:'error'}));
     alert(res.status==='success' ? 'Ajustement enregistré.' : ('Erreur: '+(res.message||'inconnue')));
   });
   qs('#btnResetInvJ').addEventListener('click', ()=>{
-    ['invjProduit','invjQte','invjUnite'].forEach(id=>{ const el=qs('#'+id); if(el) el.value=''; });
+    ['invjProduit','invjQte','invjUnite','invjZone'].forEach(id=>{ const el=qs('#'+id); if(el) el.value=''; });
   });
 }
 
-// ------------- Inventaire mensuel (avec zone dynamique) -------------
-async function loadZones(selectId){
-  const sel = document.getElementById(selectId);
-  if(!sel) return;
-  sel.innerHTML = '<option>Chargement...</option>';
-  try {
-    const res = await fetch(`${API_URL}?action=zonesList`);
-    const data = await res.json();
-    if (data.status === 'success') {
-      sel.innerHTML = data.zones.map(z => `<option value="${z}">${z}</option>`).join('');
-    } else {
-      sel.innerHTML = '<option>Erreur de chargement</option>';
-    }
-  } catch {
-    sel.innerHTML = '<option>Hors-ligne</option>';
-  }
-}
-
+// ------------- Inventaire mensuel -------------
 function mountInvM(){
   loadZones('invmZone');
   qs('#btnInvmGenerate').addEventListener('click', async ()=>{
@@ -201,8 +216,62 @@ function mountInvM(){
   });
 }
 
-// ------------- Recettes -------------
-function mountRecettes(){ /* inchangé */ }
+// ------------- Recettes (amélioré visuel) -------------
+async function loadRecettesListe(){
+  const res = await fetch(`${API_URL}?action=getRecettes`).then(r=>r.json()).catch(()=>({status:'error'}));
+  const list = qs('#recettesList'); const search = qs('#recetteSearch'); let all = [];
+  if(res.status==='success'){ all = res.recettes || []; renderRecetteCards(all); }
+  search.addEventListener('input', e=>{
+    const q = e.target.value.toLowerCase();
+    renderRecetteCards(all.filter(r => (r.nom||'').toLowerCase().includes(q)));
+  });
+}
+
+function renderRecetteCards(items){
+  const list = qs('#recettesList'); list.innerHTML = '';
+  items.forEach(r=>{
+    const card = document.createElement('div');
+    card.className='card'; card.style.cursor='pointer';
+    card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
+      <div><strong>${r.nom}</strong><br><small>Base ${r.portions} portions</small></div>
+      <button class="btn">Voir</button></div>`;
+    card.querySelector('button').addEventListener('click', ()=> loadRecetteDetail(r.code));
+    list.appendChild(card);
+  });
+}
+
+async function loadRecetteDetail(code){
+  const res = await fetch(`${API_URL}?action=getRecette&code=${encodeURIComponent(code)}`).then(r=>r.json()).catch(()=>({status:'error'}));
+  const container = document.getElementById('recetteDetail'); container.innerHTML='';
+  if(res.status!=='success'){ container.textContent='⚠️ Recette introuvable.'; return; }
+  const r = res.recette;
+  container.innerHTML = `<div class="card recette-card">
+    <h2 class="recette-title">${r.nom}</h2>
+    <div class="recette-meta"><span>Base ${r.portions || 1} portions</span></div>
+    <div class="recette-controls">
+      <label>Multiplier par :</label>
+      <input id="multiInput" type="number" value="1" min="0.1" step="0.5" class="recette-multi">
+    </div>
+    <table class="list recette-table">
+      <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Zone</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>`;
+  const tbody = container.querySelector('tbody');
+  (r.ingredients||[]).forEach(i=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i.produit}</td><td data-base="${i.quantite}">${Number(i.quantite).toFixed(2)}</td><td>${i.unite}</td><td>${i.zone||''}</td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('multiInput').addEventListener('input', e=>{
+    const m = Number(e.target.value)||1;
+    tbody.querySelectorAll('td[data-base]').forEach(td=>{
+      const base = Number(td.getAttribute('data-base'));
+      td.textContent = (base*m).toFixed(2);
+    });
+  });
+}
+function mountRecettes(){ loadRecettesListe(); }
 
 // ------------- Settings -------------
 function mountSettings(){
