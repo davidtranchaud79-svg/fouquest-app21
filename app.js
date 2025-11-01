@@ -1,5 +1,5 @@
 // Fouquet’s Joy Suite – v14.9.2 (Gold Motion Clean Edition)
-export const API_URL = localStorage.getItem('API_BASE') || "https://script.google.com/macros/s/AKfycbyQV0m92JPT1n8EmpNJrbI-Vk8aaAF9lmCCrFaxIL9DsApNyV0XMHsceIAp0YozhKH6/exec";
+export const API_URL = localStorage.getItem('API_BASE') || "https://script.google.com/macros/s/AKfycby6Aqfom259Ocq0PXyksA5QZjXbP1DTANWCrLxKMSL21i6d9mOJnhqLzQ9_u0IZo7fi/exec";
 
 const qs = (s, r=document) => r.querySelector(s);
 const qsa = (s, r=document) => [...r.querySelectorAll(s)];
