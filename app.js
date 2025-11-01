@@ -1,5 +1,5 @@
 // Fouquet’s Joy Suite – v15.0 (Gold Motion Premium – Zones sur Inventaire Mensuel)
-export const API_URL = localStorage.getItem('API_BASE') || "https://script.google.com/macros/s/AKfycbw07PMI4o4gAjxMv8I9eNfq5u2nGLrnXaxy8UxyORoOjpv99pdjs64lM0xHxTKwznM9zA/exec";
+export const API_URL = localStorage.getItem('API_BASE') || "https://script.google.com/macros/s/AKfycbw9YtrIwgaRg5nkaofUMRrPPmmvnVq7NFX3tCPM2aTIs46iGAOm0hOFkbjsoBIg9l7_Sg/exec";
 
 const qs = (s, r=document) => r.querySelector(s);
 const qsa = (s, r=document) => [...r.querySelectorAll(s)];
