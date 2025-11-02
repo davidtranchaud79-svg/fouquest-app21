@@ -4,7 +4,7 @@
 // ============================================================
 
 // === CONFIGURATION ===
-const API_URL = "https://script.google.com/macros/s/AKfycbyuYT4mXVg66ZD0x8fMFuAIGpp_4HIpfToKbgp4-yyWCywP8amCptk3brzAMi2iH_KfRQ/exec; // Remplace par ton lien Proxy
+const API_URL = "https://script.google.com/macros/s/AKfycbyuYT4mXVg66ZD0x8fMFuAIGpp_4HIpfToKbgp4-yyWCywP8amCptk3brzAMi2iH_KfRQ/exec"; // Remplace par ton lien Proxy
 const API_KEY = "FOUQUETS_2025_SECRET"; // Même clé que côté Proxy
 
 // === UTILITAIRE API ===
