@@ -5,7 +5,7 @@
 
 export const API_URL =
   localStorage.getItem("API_BASE") ||
-  "https://script.google.com/macros/s/AKfycbyLIeKFWqC22kc3_rhLQt0sXuhw1EP-e0xjNpLx_8bLsQ3wKBlwhw_SDzx_7pSFuXEH/exec";
+  "https://script.google.com/macros/s/AKfycbwecIgbgHda8asxKWO9rH56fzwe0ri04ueZOsUvS-wroADf7AlFYizruXbzHXGpn2lr/exec";
 
 const qs = (s, r = document) => r.querySelector(s);
 const qsa = (s, r = document) => [...r.querySelectorAll(s)];
