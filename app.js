@@ -4,7 +4,7 @@
 // =======================================
 
 // 🧭 URL de l’API (à remplacer si tu redéploies le script)
-const API_URL = "https://script.google.com/macros/s/AKfycbzhXTkQ0vSkU_hcR17GrWLiZM55cMBuUlaMMNu83XW8frY47vQuCfdavoNTRngTDKA4/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwavdMB97GIiknY6MAsyPgYedi1l7w_2osgErDywR-n2rNN56EglLoZ8wLdQqk43TZj/exec";
 
 // ============================
 // 🌍 Gestion API
