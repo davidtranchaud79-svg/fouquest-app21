@@ -1,263 +1,198 @@
-// ===============================
-// 🍷 Fouquet’s Joy Suite — app.js v15.6
-// Epak Design • Entrée/Sortie sans dropdown
-// ===============================
+// =======================================
+// 🍷 Fouquet’s Suite v15.7 – app.js
+// Frontend pour Joy / GitHub Pages
+// =======================================
 
-export const API_URL =
-  localStorage.getItem('API_BASE') ||
-  "https://script.google.com/macros/s/AKfycbzhXTkQ0vSkU_hcR17GrWLiZM55cMBuUlaMMNu83XW8frY47vQuCfdavoNTRngTDKA4/exec";
+// 🧭 URL de l’API (à remplacer si tu redéploies le script)
+const API_URL = "https://script.google.com/macros/s/AKfycbzhXTkQ0vSkU_hcR17GrWLiZM55cMBuUlaMMNu83XW8frY47vQuCfdavoNTRngTDKA4/exec";
 
-const qs = (s, r=document) => r.querySelector(s);
-const qsa = (s, r=document) => [...r.querySelectorAll(s)];
-const state = { view: 'dashboard', products: [], zones: [] };
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js'));
+// ============================
+// 🌍 Gestion API
+// ============================
+async function api(action, method = "GET", body = null) {
+  const options = {
+    method,
+    headers: { "Content-Type": "application/json" },
+    mode: "cors"
+  };
+  if (body) options.body = JSON.stringify(body);
+  const url = method === "GET" ? `${API_URL}?action=${action}` : API_URL;
+  const res = await fetch(url, options);
+  if (!res.ok) throw new Error(`Erreur réseau (${res.status})`);
+  return await res.json();
 }
 
-// ===============================
-// Status Sync
-// ===============================
-function setStatus(mode) {
-  const badge = qs('#syncBadge');
-  if (!badge) return;
-  badge.className = 'status-badge ' + mode;
-  badge.textContent = ({
-    online: 'En ligne',
-    offline: 'Hors ligne',
-    error: 'Erreur',
-    synced: 'Synchronisé'
-  }[mode]) || '—';
-}
-
-// ===============================
-// API
-// ===============================
-async function api(action, method='GET', body=null) {
-  try {
-    if (method === 'GET') {
-      const r = await fetch(`${API_URL}?action=${encodeURIComponent(action)}`);
-      return await r.json();
-    } else {
-      const r = await fetch(API_URL, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ action, ...(body||{}) })
-      });
-      return await r.json();
-    }
-  } catch (e) {
-    return { status: 'error', message: e.message };
-  }
-}
-
-async function checkConnection() {
-  const res = await api('getEtatStock');
-  if (res.status === 'success') { setStatus('online'); return true; }
-  setStatus(navigator.onLine ? 'error' : 'offline'); return false;
-}
-
-// ===============================
-// Datalist Produits
-// ===============================
-function ensureGlobalDatalist(id='produitsList') {
-  let dl = document.getElementById(id);
-  if (!dl) {
-    dl = document.createElement('datalist');
-    dl.id = id;
-    document.body.appendChild(dl);
-  }
-  return dl;
-}
-
-function fillProductsDatalist(products, datalistId='produitsList') {
-  const dl = ensureGlobalDatalist(datalistId);
-  dl.innerHTML = products
-    .filter(p => (p && p.produit))
-    .map(p => `<option value="${escapeHtml(p.produit)}"></option>`)
-    .join('');
-}
-
-function escapeHtml(s='') {
-  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-}
-
-// ===============================
-// Data Loaders
-// ===============================
-async function loadZones() {
-  const res = await api('zonesList');
-  state.zones = (res.status === 'success' && Array.isArray(res.zones)) ? res.zones : [];
-  return state.zones;
-}
-
-async function loadProducts() {
-  const res = await api('getStockDetail');
-  state.products = (res.status === 'success' && Array.isArray(res.stock)) ? res.stock : [];
-  fillProductsDatalist(state.products, 'produitsList');
-  return state.products;
-}
-
-// ===============================
-// Routing
-// ===============================
-document.addEventListener('DOMContentLoaded', () => {
-  qsa('.tab').forEach(btn => btn.addEventListener('click', () => render(btn.dataset.view)));
-  render('dashboard');
-  checkConnection();
-  const btn = qs('#btnSync');
-  btn && btn.addEventListener('click', async () => {
-    const ok = await checkConnection();
-    setStatus(ok ? 'synced' : 'error');
-    if (ok) setTimeout(() => setStatus('online'), 2000);
-  });
-});
-
-function render(view) {
-  state.view = view;
-  qsa('.tab').forEach(b => b.classList.toggle('active', b.dataset.view === view));
-  const tpl = qs(`#tpl-${view}`);
-  qs('#app').innerHTML = tpl ? tpl.innerHTML : '<div class="card">Vue non disponible</div>';
-  if (view === 'dashboard') mountDashboard();
-  if (view === 'pertes')    mountPertes();
-  if (view === 'invj')      mountInvJ();
-  if (view === 'invm')      mountInvM();
-  if (view === 'recettes')  mountRecettes();
-}
-
-// ===============================
-// Dashboard
-// ===============================
+// ============================
+// 📊 Fonctions Dashboard
+// ============================
 async function mountDashboard() {
-  const res = await api('getEtatStock');
-  if (res.status === 'success') {
-    qs('#kpiStock').textContent = '€ ' + (res.valeurTotale||0).toLocaleString('fr-FR');
-    qs('#kpiStockQte').textContent = (res.quantiteTotale||0).toLocaleString('fr-FR') + ' unités';
+  const app = document.getElementById("app");
+  app.innerHTML = document.getElementById("tpl-dashboard").innerHTML;
+
+  try {
+    const etat = await api("getEtatStock");
+    document.getElementById("kpiStock").textContent = etat.valeurTotale.toFixed(2) + " €";
+    document.getElementById("kpiStockQte").textContent = etat.quantiteTotale.toFixed(2) + " unités";
+  } catch (e) {
+    console.warn("Erreur dashboard:", e.message);
   }
-  const st = await api('getStockDetail');
-  const tb = qs('#tableStockDetail tbody');
-  tb.innerHTML = st.stock.map(r =>
-    `<tr><td>${escapeHtml(r.produit)}</td><td>${r.quantite}</td><td>${escapeHtml(r.unite)}</td><td>${r.prix}</td><td>${r.valeur}</td><td>${escapeHtml(r.zone)}</td></tr>`
-  ).join('');
+
+  try {
+    const stock = await api("getStockDetail");
+    const tbody = document.querySelector("#tableStockDetail tbody");
+    tbody.innerHTML = stock.stock.map(s =>
+      `<tr><td>${s.produit}</td><td>${s.quantite}</td><td>${s.unite}</td><td>${s.prix}</td><td>${s.valeur}</td><td>${s.zone}</td></tr>`
+    ).join("");
+  } catch (e) { console.warn(e.message); }
 }
 
-// ===============================
-// Pertes
-// ===============================
+// ============================
+// 🗑️ Pertes
+// ============================
 async function mountPertes() {
-  ensureGlobalDatalist('produitsList');
-  await loadProducts();
+  const app = document.getElementById("app");
+  app.innerHTML = document.getElementById("tpl-pertes").innerHTML;
 
-  const btnSave = qs('#btnSavePerte');
-  const btnReset = qs('#btnResetPerte');
+  const produits = await api("getStockDetail");
+  const datalist = document.getElementById("produitsList");
+  datalist.innerHTML = produits.stock.map(p => `<option value="${p.produit}">`).join("");
 
-  btnSave?.addEventListener('click', async () => {
-    const payload = {
-      produit: qs('#pertesProduit')?.value,
-      qte: qs('#pertesQte')?.value,
-      unite: qs('#pertesUnite')?.value,
-      motif: qs('#pertesMotif')?.value,
-      comment: qs('#pertesComment')?.value
+  document.getElementById("btnSavePerte").addEventListener("click", async () => {
+    const data = {
+      action: "pertesAdd",
+      produit: document.getElementById("pertesProduit").value,
+      qte: document.getElementById("pertesQte").value,
+      unite: document.getElementById("pertesUnite").value,
+      motif: document.getElementById("pertesMotif").value,
+      comment: document.getElementById("pertesComment").value
     };
-    const res = await api('pertesAdd','POST', payload);
-    alert(res.status==='success'?'✅ Perte enregistrée':'❌ '+res.message);
-    if(res.status==='success') ['pertesProduit','pertesQte','pertesUnite','pertesMotif','pertesComment'].forEach(i=>qs('#'+i).value='');
+    const res = await api("pertesAdd", "POST", data);
+    alert(res.message);
+    // Réinitialisation automatique
+    ["pertesProduit","pertesQte","pertesUnite","pertesMotif","pertesComment"].forEach(id=>document.getElementById(id).value="");
   });
-
-  btnReset?.addEventListener('click', ()=>['pertesProduit','pertesQte','pertesUnite','pertesMotif','pertesComment'].forEach(i=>qs('#'+i).value=''));
 }
 
-// ===============================
-// Inventaire journalier (sans dropdown mouvement)
-// ===============================
+// ============================
+// 📦 Inventaire journalier
+// ============================
 async function mountInvJ() {
-  ensureGlobalDatalist('produitsList');
-  await loadProducts();
+  const app = document.getElementById("app");
+  app.innerHTML = document.getElementById("tpl-invj").innerHTML;
 
-  const btnEntree = qs('#btnInvJEntree');
-  const btnSortie = qs('#btnInvJSortie');
-  const btnReset  = qs('#btnResetInvJ');
+  const produits = await api("getStockDetail");
+  const datalist = document.getElementById("produitsList");
+  datalist.innerHTML = produits.stock.map(p => `<option value="${p.produit}">`).join("");
 
-  async function handler(type) {
-    const payload = {
-      type, // 'entree' ou 'sortie'
-      produit: qs('#invjProduit')?.value,
-      qte: qs('#invjQte')?.value,
-      unite: qs('#invjUnite')?.value
-    };
-    const res = await api('inventaireJournalier','POST', payload);
-    alert(res.status==='success'?`✅ ${type==='sortie'?'Sortie':'Entrée'} enregistrée`:'❌ '+res.message);
-    if(res.status==='success') ['invjProduit','invjQte','invjUnite'].forEach(i=>qs('#'+i).value='');
-  }
-
-  btnEntree?.addEventListener('click', ()=>handler('entree'));
-  btnSortie?.addEventListener('click', ()=>handler('sortie'));
-  btnReset?.addEventListener('click', ()=>['invjProduit','invjQte','invjUnite'].forEach(i=>qs('#'+i).value=''));
+  // ✅ Bouton Entrée
+  document.getElementById("btnInvJEntree").addEventListener("click", async () => {
+    await sendInvJ("ENTREE");
+  });
+  // ✅ Bouton Sortie
+  document.getElementById("btnInvJSortie").addEventListener("click", async () => {
+    await sendInvJ("SORTIE");
+  });
 }
 
-// ===============================
-// Inventaire mensuel
-// ===============================
+async function sendInvJ(type) {
+  const data = {
+    action: "inventaireJournalier",
+    produit: document.getElementById("invjProduit").value,
+    qte: document.getElementById("invjQte").value,
+    unite: document.getElementById("invjUnite").value,
+    type
+  };
+  const res = await api("inventaireJournalier", "POST", data);
+  alert(res.message);
+  // 🔁 Réinitialisation
+  ["invjProduit","invjQte","invjUnite"].forEach(id=>document.getElementById(id).value="");
+}
+
+// ============================
+// 🏷️ Inventaire mensuel
+// ============================
 async function mountInvM() {
-  const zSel = qs('#invmZone');
-  if (zSel) {
-    zSel.innerHTML = '<option>Chargement…</option>';
-    const zones = await loadZones();
-    zSel.innerHTML = zones.map(z=>`<option value="${escapeHtml(z)}">${escapeHtml(z)}</option>`).join('');
-  }
-  ensureGlobalDatalist('produitsList');
-  await loadProducts();
-  qs('#invmProduit')?.setAttribute('list','produitsList');
+  const app = document.getElementById("app");
+  app.innerHTML = document.getElementById("tpl-invm").innerHTML;
 
-  qs('#btnInvmGenerate')?.addEventListener('click', async () => {
-    const payload = { zone: qs('#invmZone')?.value, mois: qs('#invmMois')?.value };
-    const res = await api('createInventaireMensuel','POST',payload);
-    alert(res.status==='success'?'📄 Feuille générée':'❌ '+res.message);
+  const zonesRes = await api("zonesList");
+  const zoneSelect = document.getElementById("invmZone");
+  zoneSelect.innerHTML = zonesRes.zones.map(z => `<option>${z}</option>`).join("");
+
+  document.getElementById("btnInvmGenerate").addEventListener("click", async () => {
+    const data = { action: "createInventaireMensuel", zone: zoneSelect.value, mois: document.getElementById("invmMois").value };
+    const res = await api("createInventaireMensuel", "POST", data);
+    alert(res.message);
   });
 
-  qs('#btnInvmSave')?.addEventListener('click', async () => {
-    const payload = {
-      zone: qs('#invmZone')?.value,
-      mois: qs('#invmMois')?.value,
-      produits: qs('#invmProduit')?.value,
-      quantite: qs('#invmQte')?.value,
-      unite: qs('#invmUnite')?.value,
-      commentaires: qs('#invmComment')?.value
+  document.getElementById("btnInvmSave").addEventListener("click", async () => {
+    const data = {
+      action: "saveInventaireMensuel",
+      zone: zoneSelect.value,
+      mois: document.getElementById("invmMois").value,
+      produits: document.getElementById("invmProduit").value,
+      quantite: document.getElementById("invmQte").value,
+      unite: document.getElementById("invmUnite").value,
+      commentaires: document.getElementById("invmComment").value
     };
-    const res = await api('saveInventaireMensuel','POST',payload);
-    alert(res.status==='success'?'💾 Enregistré':'❌ '+res.message);
-    if(res.status==='success') ['invmProduit','invmQte','invmUnite','invmComment'].forEach(i=>qs('#'+i).value='');
+    const res = await api("saveInventaireMensuel", "POST", data);
+    alert(res.message);
+    // Réinitialisation
+    ["invmProduit","invmQte","invmUnite","invmComment"].forEach(id=>document.getElementById(id).value="");
   });
 }
 
-// ===============================
-// Recettes
-// ===============================
+// ============================
+// 🍽️ Recettes
+// ============================
 async function mountRecettes() {
-  const res = await api('getRecettes');
-  const list = qs('#recettesList');
-  const search = qs('#recetteSearch');
-  let all = (res.status==='success'?res.recettes:[])||[];
-  renderRecettes(all);
-  search?.addEventListener('input',e=>{
-    const q = e.target.value.toLowerCase();
-    renderRecettes(all.filter(r=>(r.nom||'').toLowerCase().includes(q)));
+  const app = document.getElementById("app");
+  app.innerHTML = document.getElementById("tpl-recettes").innerHTML;
+  const res = await api("getRecettes");
+  const list = document.getElementById("recettesList");
+  list.innerHTML = res.recettes.map(r => `<div class="card recette" data-code="${r.code}"><strong>${r.nom}</strong><br><small>${r.categorie}</small></div>`).join("");
+  list.querySelectorAll(".recette").forEach(el => {
+    el.addEventListener("click", async () => {
+      const code = el.dataset.code;
+      const rec = await api(`getRecette&code=${code}`);
+      const det = document.getElementById("recetteDetail");
+      det.innerHTML = `<h3>${rec.recette.nom}</h3><table class="list"><tr><th>Produit</th><th>Qté</th><th>Unité</th></tr>` +
+        rec.recette.ingredients.map(i => `<tr><td>${i.produit}</td><td>${i.quantite}</td><td>${i.unite}</td></tr>`).join("") + "</table>";
+    });
   });
 }
 
-function renderRecettes(items) {
-  const list = qs('#recettesList'); list.innerHTML='';
-  items.forEach(r=>{
-    const card=document.createElement('div'); card.className='card'; card.innerHTML=`<strong>${escapeHtml(r.nom)}</strong><br><small>${r.categorie||''}</small>`;
-    card.addEventListener('click',()=>loadRecetteDetail(r.code));
-    list.appendChild(card);
-  });
+// ============================
+// ⚙️ Paramètres
+// ============================
+function mountSettings() {
+  const app = document.getElementById("app");
+  app.innerHTML = document.getElementById("tpl-settings").innerHTML;
 }
 
-async function loadRecetteDetail(code) {
-  const res = await api(`getRecette&code=${encodeURIComponent(code)}`);
-  const c = qs('#recetteDetail');
-  if(res.status!=='success'){ c.innerHTML='<div class="card">Recette introuvable</div>'; return; }
-  const r = res.recette;
-  c.innerHTML = `<div class="card"><h3>${r.nom}</h3><table class="list"><thead><tr><th>Produit</th><th>Qté</th><th>Unité</th></tr></thead><tbody>${r.ingredients.map(i=>`<tr><td>${i.produit}</td><td>${i.quantite}</td><td>${i.unite}</td></tr>`).join('')}</tbody></table></div>`;
-}
+// ============================
+// 🧭 Router simple
+// ============================
+const views = {
+  dashboard: mountDashboard,
+  pertes: mountPertes,
+  invj: mountInvJ,
+  invm: mountInvM,
+  recettes: mountRecettes,
+  settings: mountSettings
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+  const tabs = document.querySelectorAll(".tab");
+  tabs.forEach(tab => {
+    tab.addEventListener("click", async () => {
+      tabs.forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      const view = tab.dataset.view;
+      if (views[view]) await views[view]();
+    });
+  });
+  // Vue par défaut
+  mountDashboard();
+  console.log("✅ Application Fouquet’s Suite chargée");
+});
