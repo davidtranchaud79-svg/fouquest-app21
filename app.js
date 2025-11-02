@@ -1,37 +1,37 @@
 // =======================================
-// 🍷 Fouquet’s Joy Suite – app.js v15.0
-// Compatible proxy Google Apps Script
-// Zones & Produits dynamiques, auto-reset, et boutons Entrée / Sortie
+// 🍷 Fouquet’s Joy Suite – app.js v15.1
+// Version stable : fix DOM / auto-reset / proxy compatible
 // =======================================
 
-// ⚙️ URL du script (avec proxy activé)
-const SCRIPT_ID = "https://script.google.com/macros/s/AKfycbxDfmMcASzk9su5QN08LIWLlOgOW24z78vz4nuV5eXTAB0NYKVGuArRI2lOKQRehrfx/exec"; // ← remplace par ton ID Apps Script
+// ⚙️ CONFIGURATION
+const SCRIPT_ID = "https://script.google.com/macros/s/AKfycbx15mhcn4Y4GSIPxozbHoB6xsMzvUwRCCVgE9MT6H4UhNBO5N76ntf3bL2M_t0FLGJh/exec"; // ← à remplacer par ton ID Apps Script
 const BASE_URL = `https://script.google.com/macros/s/${SCRIPT_ID}/exec`;
 const API_URL = `${BASE_URL}?action=proxy&url=${encodeURIComponent(BASE_URL)}`;
 
-// ----------- outils DOM ----------- //
+// ----------- OUTILS ----------- //
 const qs = sel => document.querySelector(sel);
 const ce = tag => document.createElement(tag);
 
-// ----------- Initialisation ----------- //
+// ----------- INITIALISATION ----------- //
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("🚀 Fouquet’s Joy Suite v15.0 – Initialisation");
+  console.log("🚀 Fouquet’s Joy Suite v15.1 – Initialisation");
 
   await chargerZones();
   await chargerProduits();
   await chargerRecettes();
   await chargerDashboard();
 
-  // Pertes
-  qs("#btnSavePerte").addEventListener("click", enregistrerPerte);
-  // Inventaire journalier : deux boutons
-  qs("#btnEntreeInvJ").addEventListener("click", () => enregistrerInventaireJournalier("entree"));
-  qs("#btnSortieInvJ").addEventListener("click", () => enregistrerInventaireJournalier("sortie"));
-  // Inventaire mensuel
-  qs("#btnSaveInvM").addEventListener("click", enregistrerInventaireMensuel);
+  // ⚙️ Initialisation des vues après un court délai (DOM ready)
+  setTimeout(() => {
+    initPertes();
+    initInventaireJournalier();
+    initInventaireMensuel();
+  }, 400);
 });
 
-// ----------- Fonctions utilitaires API ----------- //
+// =======================================
+// 🔌 GESTION API
+// =======================================
 async function apiFetch(action, method = "GET", data = {}) {
   const payload = method === "POST" ? { method, body: JSON.stringify(data) } : { method };
   payload.headers = { "Content-Type": "application/json" };
@@ -50,32 +50,38 @@ async function apiFetch(action, method = "GET", data = {}) {
 }
 
 // =======================================
-// 🧱 CHARGEMENT INITIAL
+// 🧱 CHARGEMENTS INITIAUX
 // =======================================
 
-// --- Zones dynamiques ---
+// --- ZONES ---
 async function chargerZones() {
   const res = await apiFetch("zonesList", "GET");
-  if (res.status !== "success") return console.warn("Zones non chargées", res.message);
-
-  const sel = qs("#invMZone");
-  if (!sel) return;
-
-  sel.innerHTML = "";
-  res.zones.forEach(z => {
-    const opt = ce("option");
-    opt.value = z;
-    opt.textContent = z;
-    sel.appendChild(opt);
+  if (res.status !== "success") {
+    console.warn("Zones non chargées:", res.message);
+    return;
+  }
+  const selects = ["#invMZone", "#perteZone", "#invjZone"];
+  selects.forEach(id => {
+    const sel = qs(id);
+    if (!sel) return;
+    sel.innerHTML = "";
+    res.zones.forEach(z => {
+      const opt = ce("option");
+      opt.value = z;
+      opt.textContent = z;
+      sel.appendChild(opt);
+    });
   });
   console.log("✅ Zones chargées:", res.zones);
 }
 
-// --- Produits dynamiques ---
+// --- PRODUITS ---
 async function chargerProduits() {
   const res = await apiFetch("produitsList", "GET");
-  if (res.status !== "success") return console.warn("Produits non chargés", res.message);
-
+  if (res.status !== "success") {
+    console.warn("Produits non chargés:", res.message);
+    return;
+  }
   const champs = ["#perteProduit", "#invjProduit", "#invMProduit"];
   champs.forEach(id => {
     const el = qs(id);
@@ -91,46 +97,75 @@ async function chargerProduits() {
   console.log("✅ Produits chargés:", res.produits);
 }
 
-// --- Recettes ---
+// --- RECETTES ---
 async function chargerRecettes() {
   const res = await apiFetch("getRecettes", "GET");
-  if (res.status !== "success") return;
   const zoneRecettes = qs("#recettesList");
   if (!zoneRecettes) return;
+  if (res.status !== "success") {
+    zoneRecettes.innerHTML = `<li>⚠️ Erreur : ${res.message}</li>`;
+    return;
+  }
   zoneRecettes.innerHTML = "";
   res.recettes.forEach(r => {
     const li = ce("li");
     li.textContent = `${r.nom} (${r.categorie})`;
     zoneRecettes.appendChild(li);
   });
+  console.log("✅ Recettes chargées:", res.recettes.length);
 }
 
-// --- Dashboard ---
+// --- DASHBOARD ---
 async function chargerDashboard() {
   const res = await apiFetch("getEtatStock", "GET");
   if (res.status !== "success") return;
-  qs("#totalStock").textContent = `${res.quantiteTotale} unités`;
-  qs("#valeurStock").textContent = `${res.valeurTotale.toFixed(2)} €`;
+  if (qs("#totalStock")) qs("#totalStock").textContent = `${res.quantiteTotale} unités`;
+  if (qs("#valeurStock")) qs("#valeurStock").textContent = `${res.valeurTotale.toFixed(2)} €`;
 }
 
 // =======================================
 // 🧾 MODULES DE SAISIE
 // =======================================
 
+// --- INITIALISATION DES ÉCOUTEURS ---
+function initPertes() {
+  const btn = qs("#btnSavePerte");
+  if (!btn) return;
+  btn.addEventListener("click", enregistrerPerte);
+  console.log("🗑️ Bouton pertes prêt");
+}
+
+function initInventaireJournalier() {
+  const entree = qs("#btnEntreeInvJ");
+  const sortie = qs("#btnSortieInvJ");
+  if (entree) entree.addEventListener("click", () => enregistrerInventaireJournalier("entree"));
+  if (sortie) sortie.addEventListener("click", () => enregistrerInventaireJournalier("sortie"));
+  console.log("📦 Boutons inventaire journalier prêts");
+}
+
+function initInventaireMensuel() {
+  const btn = qs("#btnSaveInvM");
+  if (btn) btn.addEventListener("click", enregistrerInventaireMensuel);
+  console.log("🏷️ Bouton inventaire mensuel prêt");
+}
+
 // --- PERTES ---
 async function enregistrerPerte() {
   const payload = {
     action: "pertesAdd",
-    produit: qs("#perteProduit").value,
-    qte: qs("#perteQte").value,
-    unite: qs("#perteUnite").value,
-    motif: qs("#perteMotif")?.value || ""
+    produit: qs("#perteProduit")?.value || "",
+    qte: qs("#perteQte")?.value || 0,
+    unite: qs("#perteUnite")?.value || "",
+    motif: qs("#perteMotif")?.value || "",
+    zone: qs("#perteZone")?.value || ""
   };
   const res = await apiFetch("pertesAdd", "POST", payload);
   alert(res.status === "success" ? "✅ Perte enregistrée" : "❌ Erreur : " + res.message);
 
-  // Réinitialisation
-  ["#perteProduit", "#perteQte", "#perteUnite", "#perteMotif"].forEach(id => { const el = qs(id); if (el) el.value = ""; });
+  // Réinitialisation automatique
+  ["#perteProduit", "#perteQte", "#perteUnite", "#perteMotif", "#perteZone"].forEach(id => {
+    const el = qs(id); if (el) el.value = "";
+  });
   await chargerDashboard();
 }
 
@@ -138,27 +173,29 @@ async function enregistrerPerte() {
 async function enregistrerInventaireJournalier(type) {
   const payload = {
     action: "inventaireJournalier",
-    produit: qs("#invjProduit").value,
-    qte: qs("#invjQte").value,
-    unite: qs("#invjUnite").value,
-    type
+    produit: qs("#invjProduit")?.value || "",
+    qte: qs("#invjQte")?.value || 0,
+    unite: qs("#invjUnite")?.value || "",
+    type,
+    zone: qs("#invjZone")?.value || ""
   };
   const res = await apiFetch("inventaireJournalier", "POST", payload);
   alert(res.status === "success"
     ? (type === "sortie" ? "📦 Sortie enregistrée" : "📥 Entrée enregistrée")
     : "❌ Erreur : " + res.message);
 
-  // Réinitialisation
-  ["#invjProduit", "#invjQte", "#invjUnite"].forEach(id => { const el = qs(id); if (el) el.value = ""; });
+  ["#invjProduit", "#invjQte", "#invjUnite", "#invjZone"].forEach(id => {
+    const el = qs(id); if (el) el.value = "";
+  });
   await chargerDashboard();
 }
 
 // --- INVENTAIRE MENSUEL ---
 async function enregistrerInventaireMensuel() {
-  const zone = qs("#invMZone").value;
-  const produit = qs("#invMProduit").value;
-  const qte = qs("#invMQte").value;
-  const unite = qs("#invMUnite").value;
+  const zone = qs("#invMZone")?.value || "";
+  const produit = qs("#invMProduit")?.value || "";
+  const qte = qs("#invMQte")?.value || 0;
+  const unite = qs("#invMUnite")?.value || "";
   const mois = new Date().toISOString().slice(0,7);
 
   const payload = {
@@ -169,11 +206,11 @@ async function enregistrerInventaireMensuel() {
     unite,
     mois
   };
-
   const res = await apiFetch("saveInventaireMensuel", "POST", payload);
   alert(res.status === "success" ? "✅ Inventaire mensuel enregistré" : "❌ Erreur : " + res.message);
 
-  // Réinitialisation
-  ["#invMZone", "#invMProduit", "#invMQte", "#invMUnite"].forEach(id => { const el = qs(id); if (el) el.value = ""; });
+  ["#invMZone", "#invMProduit", "#invMQte", "#invMUnite"].forEach(id => {
+    const el = qs(id); if (el) el.value = "";
+  });
   await chargerDashboard();
 }
