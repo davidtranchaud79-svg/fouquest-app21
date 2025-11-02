@@ -1,27 +1,22 @@
 // ===============================
-// 🍷 Fouquet’s Joy Suite — app.js v15.5
-// Epak Design • Zones + Produits dynamiques • Entrée/Sortie
+// 🍷 Fouquet’s Joy Suite — app.js v15.6
+// Epak Design • Entrée/Sortie sans dropdown
 // ===============================
 
-// --- API BASE (modifie via localStorage 'API_BASE' si besoin) ---
 export const API_URL =
   localStorage.getItem('API_BASE') ||
-  "https://script.google.com/macros/s/REMP_LA_URL_DU_DEPLOIEMENT/exec";
+  "https://script.google.com/macros/s/AKfycbzhXTkQ0vSkU_hcR17GrWLiZM55cMBuUlaMMNu83XW8frY47vQuCfdavoNTRngTDKA4/exec";
 
-// --- Helpers DOM ---
 const qs = (s, r=document) => r.querySelector(s);
 const qsa = (s, r=document) => [...r.querySelectorAll(s)];
-
-// --- État ---
 const state = { view: 'dashboard', products: [], zones: [] };
 
-// --- Service Worker (PWA) ---
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js'));
 }
 
 // ===============================
-//           Statut Sync
+// Status Sync
 // ===============================
 function setStatus(mode) {
   const badge = qs('#syncBadge');
@@ -33,24 +28,15 @@ function setStatus(mode) {
     error: 'Erreur',
     synced: 'Synchronisé'
   }[mode]) || '—';
-  badge.title = ({
-    online: 'Connecté à Google Sheets',
-    offline: 'Mode hors-ligne (cache actif)',
-    error: 'Erreur de synchronisation',
-    synced: 'Synchronisé avec Sheets'
-  }[mode]) || '';
 }
 
-window.addEventListener('online',  ()=> setStatus('online'));
-window.addEventListener('offline', ()=> setStatus('offline'));
-
 // ===============================
-//             API
+// API
 // ===============================
 async function api(action, method='GET', body=null) {
   try {
     if (method === 'GET') {
-      const r = await fetch(`${API_URL}?action=${encodeURIComponent(action)}`, { method: 'GET', cache: 'no-store' });
+      const r = await fetch(`${API_URL}?action=${encodeURIComponent(action)}`);
       return await r.json();
     } else {
       const r = await fetch(API_URL, {
@@ -61,18 +47,18 @@ async function api(action, method='GET', body=null) {
       return await r.json();
     }
   } catch (e) {
-    return { status: 'error', message: e.message || 'Fetch error' };
+    return { status: 'error', message: e.message };
   }
 }
 
 async function checkConnection() {
-  const res = await api('getEtatStock','GET');
+  const res = await api('getEtatStock');
   if (res.status === 'success') { setStatus('online'); return true; }
   setStatus(navigator.onLine ? 'error' : 'offline'); return false;
 }
 
 // ===============================
-//    Datalist global produits
+// Datalist Produits
 // ===============================
 function ensureGlobalDatalist(id='produitsList') {
   let dl = document.getElementById(id);
@@ -97,156 +83,94 @@ function escapeHtml(s='') {
 }
 
 // ===============================
-//      Chargements dynamiques
+// Data Loaders
 // ===============================
 async function loadZones() {
-  const res = await api('zonesList','GET');
+  const res = await api('zonesList');
   state.zones = (res.status === 'success' && Array.isArray(res.zones)) ? res.zones : [];
   return state.zones;
 }
 
 async function loadProducts() {
-  const res = await api('getStockDetail','GET');
+  const res = await api('getStockDetail');
   state.products = (res.status === 'success' && Array.isArray(res.stock)) ? res.stock : [];
-  // Alimente le datalist global
   fillProductsDatalist(state.products, 'produitsList');
   return state.products;
 }
 
 // ===============================
-//           Views Router
+// Routing
 // ===============================
 document.addEventListener('DOMContentLoaded', () => {
-  // Onglets
   qsa('.tab').forEach(btn => btn.addEventListener('click', () => render(btn.dataset.view)));
-  // Première vue
   render('dashboard');
-  // Ping backend
   checkConnection();
-  // Bouton sync
   const btn = qs('#btnSync');
-  if (btn) {
-    btn.addEventListener('click', async () => {
-      const ok = await checkConnection();
-      if (ok) {
-        setStatus('synced');
-        setTimeout(() => setStatus('online'), 1500);
-        alert('✅ Synchronisation réussie avec Sheets');
-      } else {
-        alert('⚠️ Impossible de synchroniser (hors ligne ou erreur Apps Script)');
-      }
-    });
-  }
+  btn && btn.addEventListener('click', async () => {
+    const ok = await checkConnection();
+    setStatus(ok ? 'synced' : 'error');
+    if (ok) setTimeout(() => setStatus('online'), 2000);
+  });
 });
 
 function render(view) {
   state.view = view;
   qsa('.tab').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   const tpl = qs(`#tpl-${view}`);
-  qs('#app').innerHTML = tpl ? tpl.innerHTML : '<div class="section"><div class="card">Vue non disponible.</div></div>';
+  qs('#app').innerHTML = tpl ? tpl.innerHTML : '<div class="card">Vue non disponible</div>';
   if (view === 'dashboard') mountDashboard();
   if (view === 'pertes')    mountPertes();
   if (view === 'invj')      mountInvJ();
   if (view === 'invm')      mountInvM();
   if (view === 'recettes')  mountRecettes();
-  if (view === 'settings')  mountSettings();
 }
 
 // ===============================
-//           Dashboard
+// Dashboard
 // ===============================
-async function loadEtatStock() {
-  const res = await api('getEtatStock','GET');
+async function mountDashboard() {
+  const res = await api('getEtatStock');
   if (res.status === 'success') {
-    qs('#kpiStock')    && (qs('#kpiStock').textContent    = '€ ' + (res.valeurTotale||0).toLocaleString('fr-FR'));
-    qs('#kpiStockQte') && (qs('#kpiStockQte').textContent = (res.quantiteTotale||0).toLocaleString('fr-FR') + ' unités');
-  } else {
-    qs('#kpiStock')    && (qs('#kpiStock').textContent    = '—');
-    qs('#kpiStockQte') && (qs('#kpiStockQte').textContent = '—');
+    qs('#kpiStock').textContent = '€ ' + (res.valeurTotale||0).toLocaleString('fr-FR');
+    qs('#kpiStockQte').textContent = (res.quantiteTotale||0).toLocaleString('fr-FR') + ' unités';
   }
-}
-
-async function loadStockDetail() {
-  const res = await api('getStockDetail','GET');
-  const tbody = qs('#tableStockDetail tbody'); if (!tbody) return;
-  tbody.innerHTML = '';
-  if (res.status === 'success') {
-    res.stock.forEach(it => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${escapeHtml(it.produit||'')}</td>
-        <td style="text-align:right">${Number(it.quantite||0)}</td>
-        <td>${escapeHtml(it.unite||'')}</td>
-        <td style="text-align:right">${Number(it.prix||0).toFixed(2)}</td>
-        <td style="text-align:right">${Number(it.valeur||0).toFixed(2)}</td>
-        <td>${escapeHtml(it.zone||'')}</td>`;
-      tbody.appendChild(tr);
-    });
-  } else {
-    tbody.innerHTML = '<tr><td colspan="6">⚠️ Erreur de chargement</td></tr>';
-  }
-}
-
-function mountDashboard() {
-  loadEtatStock();
-  loadStockDetail();
-
-  // Démo top pertes (remplace par ton endpoint si dispo)
-  const tbody = qs('#topPertes tbody');
-  if (tbody) {
-    [['Saumon Label Rouge','6,2 kg','€ 148'],['Beurre AOP','3,0 kg','€ 96'],['Framboise','2,1 kg','€ 74']]
-      .forEach(r => { const tr = document.createElement('tr'); r.forEach(c=>{const td=document.createElement('td');td.textContent=c;tr.appendChild(td)}); tbody.appendChild(tr); });
-  }
-  const ctx = qs('#chartPertes');
-  if (ctx && window.Chart) {
-    new Chart(ctx, {
-      type: 'line',
-      data: { labels:['J-6','J-5','J-4','J-3','J-2','J-1','J'], datasets:[{ label:'Pertes €', data:[50,80,60,120,90,140,110] }] },
-      options: { plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
-    });
-  }
+  const st = await api('getStockDetail');
+  const tb = qs('#tableStockDetail tbody');
+  tb.innerHTML = st.stock.map(r =>
+    `<tr><td>${escapeHtml(r.produit)}</td><td>${r.quantite}</td><td>${escapeHtml(r.unite)}</td><td>${r.prix}</td><td>${r.valeur}</td><td>${escapeHtml(r.zone)}</td></tr>`
+  ).join('');
 }
 
 // ===============================
-//             Pertes
+// Pertes
 // ===============================
 async function mountPertes() {
-  // Assure datalist produits global dispo
   ensureGlobalDatalist('produitsList');
-  await loadProducts(); // remplit le datalist
-  // Événements
-  const btnSave  = qs('#btnSavePerte');
+  await loadProducts();
+
+  const btnSave = qs('#btnSavePerte');
   const btnReset = qs('#btnResetPerte');
 
-  btnSave && btnSave.addEventListener('click', async () => {
+  btnSave?.addEventListener('click', async () => {
     const payload = {
-      produit: qs('#pertesProduit')?.value?.trim(),
-      qte:     qs('#pertesQte')?.value,
-      unite:   qs('#pertesUnite')?.value?.trim(),
-      motif:   qs('#pertesMotif')?.value?.trim(),
-      comment: qs('#pertesComment')?.value?.trim()
+      produit: qs('#pertesProduit')?.value,
+      qte: qs('#pertesQte')?.value,
+      unite: qs('#pertesUnite')?.value,
+      motif: qs('#pertesMotif')?.value,
+      comment: qs('#pertesComment')?.value
     };
     const res = await api('pertesAdd','POST', payload);
-    alert(res.status === 'success' ? '✅ Perte enregistrée.' : ('❌ Erreur: ' + (res.message||'inconnue')));
-    if (res.status === 'success') {
-      // reset auto
-      ['pertesProduit','pertesQte','pertesUnite','pertesMotif','pertesComment'].forEach(id => {
-        const el = qs('#'+id); if (el) el.value = '';
-      });
-    }
+    alert(res.status==='success'?'✅ Perte enregistrée':'❌ '+res.message);
+    if(res.status==='success') ['pertesProduit','pertesQte','pertesUnite','pertesMotif','pertesComment'].forEach(i=>qs('#'+i).value='');
   });
 
-  btnReset && btnReset.addEventListener('click', () => {
-    ['pertesProduit','pertesQte','pertesUnite','pertesMotif','pertesComment'].forEach(id => {
-      const el = qs('#'+id); if (el) el.value = '';
-    });
-  });
+  btnReset?.addEventListener('click', ()=>['pertesProduit','pertesQte','pertesUnite','pertesMotif','pertesComment'].forEach(i=>qs('#'+i).value=''));
 }
 
 // ===============================
-//       Inventaire journalier
+// Inventaire journalier (sans dropdown mouvement)
 // ===============================
 async function mountInvJ() {
-  // Produits dynamiques
   ensureGlobalDatalist('produitsList');
   await loadProducts();
 
@@ -257,161 +181,83 @@ async function mountInvJ() {
   async function handler(type) {
     const payload = {
       type, // 'entree' ou 'sortie'
-      produit: qs('#invjProduit')?.value?.trim(),
-      qte:     qs('#invjQte')?.value,
-      unite:   qs('#invjUnite')?.value?.trim()
+      produit: qs('#invjProduit')?.value,
+      qte: qs('#invjQte')?.value,
+      unite: qs('#invjUnite')?.value
     };
     const res = await api('inventaireJournalier','POST', payload);
-    alert(res.status === 'success' ? `✅ ${type==='sortie'?'Sortie':'Entrée'} enregistrée.` : ('❌ Erreur: ' + (res.message||'inconnue')));
-    if (res.status === 'success') {
-      // reset auto
-      ['invjProduit','invjQte','invjUnite'].forEach(id => { const el=qs('#'+id); if (el) el.value=''; });
-    }
+    alert(res.status==='success'?`✅ ${type==='sortie'?'Sortie':'Entrée'} enregistrée`:'❌ '+res.message);
+    if(res.status==='success') ['invjProduit','invjQte','invjUnite'].forEach(i=>qs('#'+i).value='');
   }
 
-  btnEntree && btnEntree.addEventListener('click', () => handler('entree'));
-  btnSortie && btnSortie.addEventListener('click', () => handler('sortie'));
-
-  btnReset && btnReset.addEventListener('click', () => {
-    ['invjProduit','invjQte','invjUnite'].forEach(id => { const el=qs('#'+id); if (el) el.value=''; });
-  });
+  btnEntree?.addEventListener('click', ()=>handler('entree'));
+  btnSortie?.addEventListener('click', ()=>handler('sortie'));
+  btnReset?.addEventListener('click', ()=>['invjProduit','invjQte','invjUnite'].forEach(i=>qs('#'+i).value=''));
 }
 
 // ===============================
-//       Inventaire mensuel
+// Inventaire mensuel
 // ===============================
 async function mountInvM() {
-  // Zones dynamiques
   const zSel = qs('#invmZone');
   if (zSel) {
     zSel.innerHTML = '<option>Chargement…</option>';
     const zones = await loadZones();
-    zSel.innerHTML = zones.length ? zones.map(z => `<option value="${escapeHtml(z)}">${escapeHtml(z)}</option>`).join('') : '<option>(Aucune zone)</option>';
+    zSel.innerHTML = zones.map(z=>`<option value="${escapeHtml(z)}">${escapeHtml(z)}</option>`).join('');
   }
-
-  // Produits dynamiques (attacher le datalist global à #invmProduit)
   ensureGlobalDatalist('produitsList');
   await loadProducts();
-  const prodInput = qs('#invmProduit');
-  if (prodInput) prodInput.setAttribute('list','produitsList');
+  qs('#invmProduit')?.setAttribute('list','produitsList');
 
-  // Actions
-  const btnGen   = qs('#btnInvmGenerate');
-  const btnSave  = qs('#btnInvmSave');
-  const btnReset = qs('#btnInvmReset');
-
-  btnGen && btnGen.addEventListener('click', async () => {
-    const payload = {
-      zone: qs('#invmZone')?.value?.trim(),
-      mois: qs('#invmMois')?.value || ''
-    };
-    const res = await api('createInventaireMensuel','POST', payload);
-    alert(res.status === 'success' ? '📄 Feuille générée.' : ('❌ Erreur: ' + (res.message||'inconnue')));
+  qs('#btnInvmGenerate')?.addEventListener('click', async () => {
+    const payload = { zone: qs('#invmZone')?.value, mois: qs('#invmMois')?.value };
+    const res = await api('createInventaireMensuel','POST',payload);
+    alert(res.status==='success'?'📄 Feuille générée':'❌ '+res.message);
   });
 
-  btnSave && btnSave.addEventListener('click', async () => {
+  qs('#btnInvmSave')?.addEventListener('click', async () => {
     const payload = {
-      zone:         qs('#invmZone')?.value?.trim(),
-      mois:         qs('#invmMois')?.value || '',
-      produits:     qs('#invmProduit')?.value?.trim(),
-      quantite:     qs('#invmQte')?.value,
-      unite:        qs('#invmUnite')?.value?.trim(),
-      commentaires: qs('#invmComment')?.value?.trim()
+      zone: qs('#invmZone')?.value,
+      mois: qs('#invmMois')?.value,
+      produits: qs('#invmProduit')?.value,
+      quantite: qs('#invmQte')?.value,
+      unite: qs('#invmUnite')?.value,
+      commentaires: qs('#invmComment')?.value
     };
-    const res = await api('saveInventaireMensuel','POST', payload);
-    alert(res.status === 'success' ? '💾 Enregistré sur la feuille.' : ('❌ Erreur: ' + (res.message||'inconnue')));
-    if (res.status === 'success') {
-      ['invmProduit','invmQte','invmUnite','invmComment'].forEach(id => { const el=qs('#'+id); if (el) el.value=''; });
-    }
-  });
-
-  btnReset && btnReset.addEventListener('click', () => {
-    ['invmMois','invmProduit','invmQte','invmUnite','invmComment'].forEach(id => { const el=qs('#'+id); if (el) el.value=''; });
+    const res = await api('saveInventaireMensuel','POST',payload);
+    alert(res.status==='success'?'💾 Enregistré':'❌ '+res.message);
+    if(res.status==='success') ['invmProduit','invmQte','invmUnite','invmComment'].forEach(i=>qs('#'+i).value='');
   });
 }
 
 // ===============================
-//            Recettes
+// Recettes
 // ===============================
-async function loadRecettesListe() {
-  const res = await api('getRecettes','GET');
+async function mountRecettes() {
+  const res = await api('getRecettes');
   const list = qs('#recettesList');
   const search = qs('#recetteSearch');
-  if (!list || !search) return;
-
-  let all = [];
-  if (res.status === 'success') { all = res.recettes || []; renderRecetteCards(all); }
-
-  search.addEventListener('input', e => {
+  let all = (res.status==='success'?res.recettes:[])||[];
+  renderRecettes(all);
+  search?.addEventListener('input',e=>{
     const q = e.target.value.toLowerCase();
-    renderRecetteCards(all.filter(r => (r.nom||'').toLowerCase().includes(q)));
+    renderRecettes(all.filter(r=>(r.nom||'').toLowerCase().includes(q)));
   });
 }
 
-function renderRecetteCards(items) {
-  const list = qs('#recettesList'); if (!list) return;
-  list.innerHTML = '';
-  items.forEach(r => {
-    const card = document.createElement('div');
-    card.className = 'card'; card.style.cursor = 'pointer';
-    card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
-      <div><strong>${escapeHtml(r.nom)}</strong><br><small>Base ${Number(r.portions||1)} portions</small></div>
-      <button class="btn">Voir</button>
-    </div>`;
-    card.querySelector('button').addEventListener('click', () => loadRecetteDetail(r.code));
+function renderRecettes(items) {
+  const list = qs('#recettesList'); list.innerHTML='';
+  items.forEach(r=>{
+    const card=document.createElement('div'); card.className='card'; card.innerHTML=`<strong>${escapeHtml(r.nom)}</strong><br><small>${r.categorie||''}</small>`;
+    card.addEventListener('click',()=>loadRecetteDetail(r.code));
     list.appendChild(card);
   });
 }
 
 async function loadRecetteDetail(code) {
-  const container = qs('#recetteDetail'); if (!container) return;
-  container.innerHTML = '';
-  const res = await api(`getRecette&code=${encodeURIComponent(code)}`,'GET');
-  if (res.status !== 'success') { container.textContent = '⚠️ Recette introuvable.'; return; }
+  const res = await api(`getRecette&code=${encodeURIComponent(code)}`);
+  const c = qs('#recetteDetail');
+  if(res.status!=='success'){ c.innerHTML='<div class="card">Recette introuvable</div>'; return; }
   const r = res.recette;
-  container.innerHTML = `<div class="card recette-card">
-    <h2 class="recette-title">${escapeHtml(r.nom)}</h2>
-    <div class="recette-meta"><span>Base ${Number(r.portions||1)} portions</span></div>
-    <div class="recette-controls">
-      <label>Multiplier par :</label>
-      <input id="multiInput" type="number" value="1" min="0.1" step="0.5" class="recette-multi">
-    </div>
-    <table class="list recette-table">
-      <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Zone</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </div>`;
-  const tbody = container.querySelector('tbody');
-  (r.ingredients||[]).forEach(i => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${escapeHtml(i.produit||'')}</td>
-                    <td data-base="${Number(i.quantite||0)}">${Number(i.quantite||0).toFixed(2)}</td>
-                    <td>${escapeHtml(i.unite||'')}</td>
-                    <td>${escapeHtml(i.zone||'')}</td>`;
-    tbody.appendChild(tr);
-  });
-  const multi = qs('#multiInput');
-  multi && multi.addEventListener('input', e => {
-    const m = Number(e.target.value)||1;
-    tbody.querySelectorAll('td[data-base]').forEach(td => {
-      const base = Number(td.getAttribute('data-base'))||0;
-      td.textContent = (base*m).toFixed(2);
-    });
-  });
-}
-
-function mountRecettes(){ loadRecettesListe(); }
-
-// ===============================
-//           Settings
-// ===============================
-function mountSettings() {
-  const btn = qs('#btnSetSave');
-  btn && btn.addEventListener('click', () => {
-    localStorage.setItem('etab',   qs('#setEtab')?.value || '');
-    localStorage.setItem('tz',     qs('#setTz')?.value || '');
-    localStorage.setItem('emailCC',qs('#setEmail')?.value || '');
-    localStorage.setItem('lang',   qs('#setLang')?.value || 'fr');
-    alert('Paramètres enregistrés.');
-  });
+  c.innerHTML = `<div class="card"><h3>${r.nom}</h3><table class="list"><thead><tr><th>Produit</th><th>Qté</th><th>Unité</th></tr></thead><tbody>${r.ingredients.map(i=>`<tr><td>${i.produit}</td><td>${i.quantite}</td><td>${i.unite}</td></tr>`).join('')}</tbody></table></div>`;
 }
