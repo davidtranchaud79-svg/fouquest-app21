@@ -44,3 +44,32 @@ body{ margin:0;background: var(--bordeaux);color: var(--ivory);font-family: syst
 .list th,.list td{padding:8px 6px;border-bottom:1px solid #e9e1d6;text-align:left}
 .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 @media(max-width:860px){ .grid-3{grid-template-columns:1fr} .container{padding:12px} }
+/* Animation de synchro */
+.status-badge.pulse {
+  animation: pulseSync 0.8s ease-in-out 2;
+}
+@keyframes pulseSync {
+  0% { transform: scale(1); background-color: #5a0d0d; }
+  50% { transform: scale(1.2); background-color: #7dd56f; color:#000; }
+  100% { transform: scale(1); background-color: #5a0d0d; color:#fff; }
+}
+
+/* Toast visuel */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(40px);
+  background: rgba(90,13,13,0.95);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 8px;
+  opacity: 0;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  z-index: 9999;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
