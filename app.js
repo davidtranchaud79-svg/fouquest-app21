@@ -1,198 +1,172 @@
-// =======================================
-// 🍷 Fouquet’s Suite v15.7 – app.js
-// Frontend pour Joy / GitHub Pages
-// =======================================
+// ============================================================
+// 🍷 Fouquet’s Suite – Frontend App.js
+// Edition: Secure API Key + CORS Proxy (Nov 2025)
+// ============================================================
 
-// 🧭 URL de l’API (à remplacer si tu redéploies le script)
-const API_URL = "https://script.google.com/macros/s/AKfycbxfS2Hj2vUajqo_5xP3EMvUlYmZi6NY4o7-3Z7IJZdrsYjndBlYBX32fiwEHDvLDmyu/exec";
+// === CONFIGURATION ===
+const API_URL = "https://script.google.com/macros/s/AKfycbPROXYID/exec"; // Remplace par ton lien Proxy
+const API_KEY = "FOUQUETS_2025_SECRET"; // Même clé que côté Proxy
 
-// ============================
-// 🌍 Gestion API
-// ============================
-async function api(action, method = "GET", body = null) {
-  const options = {
-    method,
-    headers: { "Content-Type": "application/json" },
-    mode: "cors"
-  };
-  if (body) options.body = JSON.stringify(body);
-  const url = method === "GET" ? `${API_URL}?action=${action}` : API_URL;
-  const res = await fetch(url, options);
-  if (!res.ok) throw new Error(`Erreur réseau (${res.status})`);
-  return await res.json();
+// === UTILITAIRE API ===
+async function api(action, data = {}) {
+  try {
+    const payload = { key: API_KEY, action, ...data };
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return await res.json();
+  } catch (err) {
+    console.error("Erreur API:", err);
+    return { status: "error", message: err.message };
+  }
 }
 
-// ============================
-// 📊 Fonctions Dashboard
-// ============================
-async function mountDashboard() {
-  const app = document.getElementById("app");
-  app.innerHTML = document.getElementById("tpl-dashboard").innerHTML;
+// === GESTION DE LA NAVIGATION ===
+const qs = s => document.querySelector(s);
+const app = qs("#app");
+const tabs = document.querySelectorAll(".tab");
 
+tabs.forEach(btn => btn.addEventListener("click", () => {
+  tabs.forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  render(btn.dataset.view);
+}));
+
+// === SYNCHRONISATION ===
+async function checkConnection() {
+  const res = await api("ping");
+  const badge = qs("#syncBadge");
+  if (res.status === "success") {
+    badge.textContent = "En ligne";
+    badge.classList.remove("offline");
+    badge.classList.add("online");
+  } else {
+    badge.textContent = "Hors ligne";
+    badge.classList.add("offline");
+  }
+}
+qs("#btnSync").addEventListener("click", checkConnection);
+
+// === RENDER ===
+async function render(view) {
+  const tpl = document.getElementById(`tpl-${view}`);
+  app.innerHTML = tpl ? tpl.innerHTML : "<p>Vue inconnue</p>";
+
+  if (view === "dashboard") await mountDashboard();
+  if (view === "pertes") mountPertes();
+  if (view === "invj") mountInvJ();
+  if (view === "invm") mountInvM();
+  if (view === "recettes") mountRecettes();
+  if (view === "settings") console.log("Paramètres ouverts");
+}
+
+// === DASHBOARD ===
+async function mountDashboard() {
   try {
     const etat = await api("getEtatStock");
-    document.getElementById("kpiStock").textContent = etat.valeurTotale.toFixed(2) + " €";
-    document.getElementById("kpiStockQte").textContent = etat.quantiteTotale.toFixed(2) + " unités";
-  } catch (e) {
-    console.warn("Erreur dashboard:", e.message);
+    const detail = await api("getStockDetail");
+
+    qs("#kpiStock").textContent = etat.totalValeur + " €";
+    qs("#kpiStockQte").textContent = etat.totalQuantite + " unités";
+
+    const tbody = qs("#tableStockDetail tbody");
+    tbody.innerHTML = (detail || []).map(r => `
+      <tr><td>${r.produit}</td><td>${r.qte}</td><td>${r.unite}</td><td>${r.prix}</td><td>${r.valeur}</td><td>${r.zone}</td></tr>
+    `).join("");
+  } catch (err) {
+    console.error("Erreur dashboard:", err);
   }
-
-  try {
-    const stock = await api("getStockDetail");
-    const tbody = document.querySelector("#tableStockDetail tbody");
-    tbody.innerHTML = stock.stock.map(s =>
-      `<tr><td>${s.produit}</td><td>${s.quantite}</td><td>${s.unite}</td><td>${s.prix}</td><td>${s.valeur}</td><td>${s.zone}</td></tr>`
-    ).join("");
-  } catch (e) { console.warn(e.message); }
 }
 
-// ============================
-// 🗑️ Pertes
-// ============================
-async function mountPertes() {
-  const app = document.getElementById("app");
-  app.innerHTML = document.getElementById("tpl-pertes").innerHTML;
-
-  const produits = await api("getStockDetail");
-  const datalist = document.getElementById("produitsList");
-  datalist.innerHTML = produits.stock.map(p => `<option value="${p.produit}">`).join("");
-
-  document.getElementById("btnSavePerte").addEventListener("click", async () => {
+// === PERTES ===
+function mountPertes() {
+  qs("#btnSavePerte").addEventListener("click", async () => {
     const data = {
-      action: "pertesAdd",
-      produit: document.getElementById("pertesProduit").value,
-      qte: document.getElementById("pertesQte").value,
-      unite: document.getElementById("pertesUnite").value,
-      motif: document.getElementById("pertesMotif").value,
-      comment: document.getElementById("pertesComment").value
+      produit: qs("#pertesProduit").value,
+      qte: qs("#pertesQte").value,
+      unite: qs("#pertesUnite").value,
+      motif: qs("#pertesMotif").value,
+      comment: qs("#pertesComment").value
     };
-    const res = await api("pertesAdd", "POST", data);
-    alert(res.message);
-    // Réinitialisation automatique
-    ["pertesProduit","pertesQte","pertesUnite","pertesMotif","pertesComment"].forEach(id=>document.getElementById(id).value="");
+    const res = await api("apiPertesAdd", data);
+    alert(res.status === "success" ? "✅ Perte enregistrée" : "❌ Erreur: " + res.message);
+    // Réinitialisation
+    ["pertesProduit", "pertesQte", "pertesUnite", "pertesMotif", "pertesComment"].forEach(id => qs("#" + id).value = "");
   });
 }
 
-// ============================
-// 📦 Inventaire journalier
-// ============================
+// === INVENTAIRE JOURNALIER ===
 async function mountInvJ() {
-  const app = document.getElementById("app");
-  app.innerHTML = document.getElementById("tpl-invj").innerHTML;
-
   const produits = await api("getStockDetail");
-  const datalist = document.getElementById("produitsList");
-  datalist.innerHTML = produits.stock.map(p => `<option value="${p.produit}">`).join("");
+  const input = qs("#invjProduit");
+  input.setAttribute("list", "produitsList");
+  const datalist = document.createElement("datalist");
+  datalist.id = "produitsList";
+  datalist.innerHTML = produits.map(p => `<option value="${p.produit}">`).join("");
+  document.body.appendChild(datalist);
 
-  // ✅ Bouton Entrée
-  document.getElementById("btnInvJEntree").addEventListener("click", async () => {
-    await sendInvJ("ENTREE");
-  });
-  // ✅ Bouton Sortie
-  document.getElementById("btnInvJSortie").addEventListener("click", async () => {
-    await sendInvJ("SORTIE");
-  });
+  qs("#btnInvJEntree").addEventListener("click", () => handleInvJ("entree"));
+  qs("#btnInvJSortie").addEventListener("click", () => handleInvJ("sortie"));
 }
 
-async function sendInvJ(type) {
+async function handleInvJ(type) {
   const data = {
-    action: "inventaireJournalier",
-    produit: document.getElementById("invjProduit").value,
-    qte: document.getElementById("invjQte").value,
-    unite: document.getElementById("invjUnite").value,
+    produit: qs("#invjProduit").value,
+    qte: qs("#invjQte").value,
+    unite: qs("#invjUnite").value,
     type
   };
-  const res = await api("inventaireJournalier", "POST", data);
-  alert(res.message);
-  // 🔁 Réinitialisation
-  ["invjProduit","invjQte","invjUnite"].forEach(id=>document.getElementById(id).value="");
+  const res = await api("inventaireJournalier", data);
+  alert(res.status === "success" ? "✅ Inventaire enregistré" : "❌ Erreur: " + res.message);
+  ["invjProduit", "invjQte", "invjUnite"].forEach(id => qs("#" + id).value = "");
 }
 
-// ============================
-// 🏷️ Inventaire mensuel
-// ============================
+// === INVENTAIRE MENSUEL ===
 async function mountInvM() {
-  const app = document.getElementById("app");
-  app.innerHTML = document.getElementById("tpl-invm").innerHTML;
+  const zones = await api("apiZonesList");
+  const selZone = qs("#invmZone");
+  selZone.innerHTML = zones.map(z => `<option>${z.zone}</option>`).join("");
+  const produits = await api("getStockDetail");
+  const inputProd = qs("#invmProduit");
+  inputProd.setAttribute("list", "produitsMensuel");
+  const dl = document.createElement("datalist");
+  dl.id = "produitsMensuel";
+  dl.innerHTML = produits.map(p => `<option value="${p.produit}">`).join("");
+  document.body.appendChild(dl);
 
-  const zonesRes = await api("zonesList");
-  const zoneSelect = document.getElementById("invmZone");
-  zoneSelect.innerHTML = zonesRes.zones.map(z => `<option>${z}</option>`).join("");
-
-  document.getElementById("btnInvmGenerate").addEventListener("click", async () => {
-    const data = { action: "createInventaireMensuel", zone: zoneSelect.value, mois: document.getElementById("invmMois").value };
-    const res = await api("createInventaireMensuel", "POST", data);
-    alert(res.message);
-  });
-
-  document.getElementById("btnInvmSave").addEventListener("click", async () => {
+  qs("#btnInvmSave").addEventListener("click", async () => {
     const data = {
-      action: "saveInventaireMensuel",
-      zone: zoneSelect.value,
-      mois: document.getElementById("invmMois").value,
-      produits: document.getElementById("invmProduit").value,
-      quantite: document.getElementById("invmQte").value,
-      unite: document.getElementById("invmUnite").value,
-      commentaires: document.getElementById("invmComment").value
+      zone: selZone.value,
+      mois: qs("#invmMois").value,
+      produit: inputProd.value,
+      qte: qs("#invmQte").value,
+      unite: qs("#invmUnite").value,
+      comment: qs("#invmComment").value
     };
-    const res = await api("saveInventaireMensuel", "POST", data);
-    alert(res.message);
-    // Réinitialisation
-    ["invmProduit","invmQte","invmUnite","invmComment"].forEach(id=>document.getElementById(id).value="");
+    const res = await api("saveInventaireMensuel", data);
+    alert(res.status === "success" ? "✅ Enregistré" : "❌ Erreur: " + res.message);
   });
 }
 
-// ============================
-// 🍽️ Recettes
-// ============================
+// === RECETTES ===
 async function mountRecettes() {
-  const app = document.getElementById("app");
-  app.innerHTML = document.getElementById("tpl-recettes").innerHTML;
-  const res = await api("getRecettes");
-  const list = document.getElementById("recettesList");
-  list.innerHTML = res.recettes.map(r => `<div class="card recette" data-code="${r.code}"><strong>${r.nom}</strong><br><small>${r.categorie}</small></div>`).join("");
-  list.querySelectorAll(".recette").forEach(el => {
-    el.addEventListener("click", async () => {
-      const code = el.dataset.code;
-      const rec = await api(`getRecette&code=${code}`);
-      const det = document.getElementById("recetteDetail");
-      det.innerHTML = `<h3>${rec.recette.nom}</h3><table class="list"><tr><th>Produit</th><th>Qté</th><th>Unité</th></tr>` +
-        rec.recette.ingredients.map(i => `<tr><td>${i.produit}</td><td>${i.quantite}</td><td>${i.unite}</td></tr>`).join("") + "</table>";
-    });
-  });
+  const recettes = await api("apiGetRecettesList");
+  const list = qs("#recettesList");
+  list.innerHTML = recettes.map(r => `<div class="card recette" data-id="${r.id}">${r.nom}</div>`).join("");
+  list.querySelectorAll(".recette").forEach(div => div.addEventListener("click", () => loadRecette(div.dataset.id)));
 }
 
-// ============================
-// ⚙️ Paramètres
-// ============================
-function mountSettings() {
-  const app = document.getElementById("app");
-  app.innerHTML = document.getElementById("tpl-settings").innerHTML;
+async function loadRecette(id) {
+  const recette = await api("apiGetRecette", { id });
+  const d = qs("#recetteDetail");
+  d.innerHTML = `<h3>${recette.nom}</h3><p>${recette.description}</p>`;
 }
 
-// ============================
-// 🧭 Router simple
-// ============================
-const views = {
-  dashboard: mountDashboard,
-  pertes: mountPertes,
-  invj: mountInvJ,
-  invm: mountInvM,
-  recettes: mountRecettes,
-  settings: mountSettings
-};
-
-document.addEventListener("DOMContentLoaded", () => {
-  const tabs = document.querySelectorAll(".tab");
-  tabs.forEach(tab => {
-    tab.addEventListener("click", async () => {
-      tabs.forEach(t => t.classList.remove("active"));
-      tab.classList.add("active");
-      const view = tab.dataset.view;
-      if (views[view]) await views[view]();
-    });
-  });
-  // Vue par défaut
-  mountDashboard();
+// === INIT ===
+document.addEventListener("DOMContentLoaded", async () => {
   console.log("✅ Application Fouquet’s Suite chargée");
+  await checkConnection();
+  render("dashboard");
 });
