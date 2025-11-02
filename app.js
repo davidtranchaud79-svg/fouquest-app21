@@ -3,7 +3,7 @@
 // =======================================
 
 // ⛳️ Remplace par TON URL de déploiement Web Apps Script
-const API_URL = "https://script.google.com/macros/s/AKfycbw0saQi9GQTn9HqMX7kJND5fqYkm_MQaAXrgq-x9GttvtbONf5adfuGwIiAYMqx3DLy/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwahDLwLBmd6OFyeeMdeoqL4lsTQedZmfciZgy6Ef-f9Ctk2qLSalZkRIA5JraLd5pb/exec";
 
 const qs  = (s, r=document) => r.querySelector(s);
 const qsa = (s, r=document) => [...r.querySelectorAll(s)];
