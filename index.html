@@ -153,7 +153,13 @@
       </div>
     </section>
   </template>
-
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js")
+    .then(()=>console.log("✅ Service Worker actif"))
+    .catch(err=>console.warn("SW erreur:", err));
+}
+</script>
   <template id="tpl-settings">
     <section class="section">
       <div class="card">
