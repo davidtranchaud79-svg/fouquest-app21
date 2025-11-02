@@ -108,8 +108,11 @@
           <div class="input-field input-icon"><label>Unité</label><span>🧪</span><input id="invjUnite" placeholder="kg / L / pièce" /></div>
           <div class="input-field input-icon"><label>Mouvement</label><span>↕️</span><select id="invjType"><option value="entree">Entrée</option><option value="sortie">Sortie</option></select></div>
           </div>
-        <div style="display:flex;gap:10px;margin-top:10px">
-          <button class="btn" id="btnSaveInvJ">💾 Enregistrer</button>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+  <div style="display:flex;gap:10px;justify-content:center;">
+    <button class="btn btn-entree" id="btnInvJEntree">⬆️ Entrée</button>
+    <button class="btn btn-sortie" id="btnInvJSortie">⬇️ Sortie</button>
+  </div>
           <button class="btn" id="btnResetInvJ">Réinitialiser</button>
         </div>
       </div>
