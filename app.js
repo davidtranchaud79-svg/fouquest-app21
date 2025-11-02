@@ -1,24 +1,25 @@
 // ==============================
-// 🍷 Fouquet’s Joy Suite v15.8
-// Epak Gold Motion Edition
+// 🍷 Fouquet’s Joy Suite v15.9
+// Gold Motion Edition (PWA)
 // ==============================
 
 export const API_URL =
   localStorage.getItem("API_BASE") ||
-  "https://script.google.com/macros/s/AKfycbz5RKYrLWrt3rhVSPj6J0DDseUmplPzBY8kldWkyaAeKhVWaVCO9tzopOf9tbSkJJlh/exec";
+  "https://script.google.com/macros/s/AKfycbyLIeKFWqC22kc3_rhLQt0sXuhw1EP-e0xjNpLx_8bLsQ3wKBlwhw_SDzx_7pSFuXEH/exec";
 
 const qs = (s, r = document) => r.querySelector(s);
 const qsa = (s, r = document) => [...r.querySelectorAll(s)];
 
 const state = { view: "dashboard" };
 
+// === Service Worker ===
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () =>
     navigator.serviceWorker.register("./service-worker.js")
   );
 }
 
-// ---- Status badge ----
+// === STATUS BADGE ===
 function setStatus(mode) {
   const badge = qs("#syncBadge");
   if (!badge) return;
@@ -85,7 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// === RENDER ===
+// === VUES ===
 function render(view) {
   state.view = view;
   qsa(".tab").forEach((b) =>
@@ -146,23 +147,17 @@ async function loadStockDetail() {
 function mountDashboard() {
   loadEtatStock();
   loadStockDetail();
-  const tbody = qs("#topPertes tbody");
-  [["Saumon Label Rouge", "6,2 kg", "€ 148"],
-   ["Beurre AOP", "3,0 kg", "€ 96"],
-   ["Framboise", "2,1 kg", "€ 74"]]
-    .forEach((r) => {
-      const tr = document.createElement("tr");
-      r.forEach((c) => {
-        const td = document.createElement("td");
-        td.textContent = c;
-        tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
-    });
 }
 
 // === PERTES ===
 function mountPertes() {
+  const resetPertes = () => {
+    ["pertesProduit", "pertesQte", "pertesUnite", "pertesMotif", "pertesComment"].forEach((id) => {
+      const el = qs("#" + id);
+      if (el) el.value = "";
+    });
+  };
+
   qs("#btnSavePerte").addEventListener("click", async () => {
     const payload = {
       action: "pertesAdd",
@@ -179,24 +174,21 @@ function mountPertes() {
     })
       .then((r) => r.json())
       .catch(() => ({ status: "error" }));
-    alert(
-      res.status === "success"
-        ? "✅ Perte enregistrée."
-        : "❌ Erreur: " + (res.message || "inconnue")
-    );
+
+    if (res.status === "success") {
+      alert("✅ Perte enregistrée.");
+      resetPertes(); // 🧹 Reset automatique
+    } else {
+      alert("❌ Erreur: " + (res.message || "inconnue"));
+    }
   });
 
-  qs("#btnResetPerte").addEventListener("click", () => {
-    ["pertesProduit", "pertesQte", "pertesUnite", "pertesMotif", "pertesComment"].forEach((id) => {
-      const el = qs("#" + id);
-      if (el) el.value = "";
-    });
-  });
+  qs("#btnResetPerte").addEventListener("click", resetPertes);
 }
 
 // === INVENTAIRE JOURNALIER (Entrée / Sortie) ===
 function mountInvJ() {
-  const resetFields = () => {
+  const resetInvJ = () => {
     ["invjProduit", "invjQte", "invjUnite"].forEach((id) => {
       const el = qs("#" + id);
       if (el) el.value = "";
@@ -205,19 +197,21 @@ function mountInvJ() {
 
   qs("#btnInvJEntree").addEventListener("click", async () => {
     await sendInvJ("entree");
+    resetInvJ();
   });
 
   qs("#btnInvJSortie").addEventListener("click", async () => {
     await sendInvJ("sortie");
+    resetInvJ();
   });
 
-  qs("#btnResetInvJ").addEventListener("click", resetFields);
+  qs("#btnResetInvJ").addEventListener("click", resetInvJ);
 }
 
 async function sendInvJ(type) {
   const payload = {
     action: "inventaireJournalier",
-    type: type,
+    type,
     produit: qs("#invjProduit").value,
     qte: qs("#invjQte").value,
     unite: qs("#invjUnite").value,
@@ -239,6 +233,24 @@ async function sendInvJ(type) {
 }
 
 // === INVENTAIRE MENSUEL ===
+async function loadZones(selectId) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  sel.innerHTML = '<option>Chargement...</option>';
+
+  try {
+    const res = await fetch(`${API_URL}?action=zonesList`);
+    const data = await res.json();
+    if (data.status === "success") {
+      sel.innerHTML = data.zones.map((z) => `<option value="${z}">${z}</option>`).join("");
+    } else {
+      sel.innerHTML = "<option>Erreur</option>";
+    }
+  } catch {
+    sel.innerHTML = "<option>Hors-ligne</option>";
+  }
+}
+
 function mountInvM() {
   loadZones("invmZone");
 
@@ -277,13 +289,6 @@ function mountInvM() {
         : "❌ Erreur d’enregistrement."
     );
   });
-
-  qs("#btnInvmReset").addEventListener("click", () => {
-    ["invmMois", "invmProduit", "invmQte", "invmUnite", "invmComment"].forEach((id) => {
-      const el = qs("#" + id);
-      if (el) el.value = "";
-    });
-  });
 }
 
 // === RECETTES ===
@@ -310,13 +315,10 @@ function renderRecetteCards(items) {
   items.forEach((r) => {
     const card = document.createElement("div");
     card.className = "card";
-    card.style.cursor = "pointer";
     card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
-      <div><strong>${r.nom}</strong><br><small>Base ${r.portions} portions</small></div>
+      <div><strong>${r.nom}</strong><br><small>${r.portions} portions</small></div>
       <button class="btn">Voir</button></div>`;
-    card
-      .querySelector("button")
-      .addEventListener("click", () => loadRecetteDetail(r.code));
+    card.querySelector("button").addEventListener("click", () => loadRecetteDetail(r.code));
     list.appendChild(card);
   });
 }
@@ -332,47 +334,37 @@ async function loadRecetteDetail(code) {
     return;
   }
   const r = res.recette;
-  container.innerHTML = `<div class="card recette-card">
-    <h2 class="recette-title">${r.nom}</h2>
-    <div class="recette-meta"><span>Base ${r.portions || 1} portions</span></div>
-    <div class="recette-controls">
-      <label>Multiplier par :</label>
-      <input id="multiInput" type="number" value="1" min="0.1" step="0.5" class="recette-multi">
-    </div>
-    <table class="list recette-table">
-      <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Zone</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </div>`;
+  container.innerHTML = `<div class="card">
+    <h2>${r.nom}</h2>
+    <p><small>${r.portions} portions</small></p>
+    <input id="multiInput" type="number" value="1" min="0.1" step="0.5">
+    <table class="list"><thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Zone</th></tr></thead><tbody></tbody></table></div>`;
   const tbody = container.querySelector("tbody");
   (r.ingredients || []).forEach((i) => {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${i.produit}</td><td data-base="${i.quantite}">${Number(
-      i.quantite
-    ).toFixed(2)}</td><td>${i.unite}</td><td>${i.zone || ""}</td>`;
+    tr.innerHTML = `<td>${i.produit}</td><td data-base="${i.quantite}">${Number(i.quantite).toFixed(2)}</td><td>${i.unite}</td><td>${i.zone}</td>`;
     tbody.appendChild(tr);
   });
-  document
-    .getElementById("multiInput")
-    .addEventListener("input", (e) => {
-      const m = Number(e.target.value) || 1;
-      tbody.querySelectorAll("td[data-base]").forEach((td) => {
-        const base = Number(td.getAttribute("data-base"));
-        td.textContent = (base * m).toFixed(2);
-      });
+  document.getElementById("multiInput").addEventListener("input", (e) => {
+    const m = Number(e.target.value) || 1;
+    tbody.querySelectorAll("td[data-base]").forEach((td) => {
+      const base = Number(td.getAttribute("data-base"));
+      td.textContent = (base * m).toFixed(2);
     });
+  });
 }
+
 function mountRecettes() {
   loadRecettesListe();
 }
 
-// === SETTINGS ===
+// === PARAMÈTRES ===
 function mountSettings() {
   qs("#btnSetSave").addEventListener("click", () => {
     localStorage.setItem("etab", qs("#setEtab").value);
     localStorage.setItem("tz", qs("#setTz").value);
     localStorage.setItem("emailCC", qs("#setEmail").value);
     localStorage.setItem("lang", qs("#setLang").value);
-    alert("Paramètres enregistrés.");
+    alert("✅ Paramètres enregistrés.");
   });
 }
