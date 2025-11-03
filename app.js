@@ -2,7 +2,7 @@
 // 🍷 Fouquet’s Suite v15.3 – Frontend App.js
 // ============================================================
 
-const API_URL = "https://script.google.com/macros/s/TON_PROXY_ID/exec"; // ← ton URL Apps Script
+const API_URL = "https://script.google.com/macros/s/AKfycbxNRhJkWjZhO8llMlK_PmQ4rqRCQB_RtJEyE19tVkR9zACLLqjx67ottzKIIki_9G9vCA/exec"; // ← ton URL Apps Script
 const API_KEY = "FOUQUETS_2025_SECRET";
 
 // === UTILITAIRE API ===
