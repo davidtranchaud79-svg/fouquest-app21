@@ -6,7 +6,7 @@
 // =====================================================
 
 const API_BASE = localStorage.getItem('API_BASE')
-  || "https://script.google.com/macros/s/TON_DEPLOIEMENT_EXEC/exec"; // ← mets ton URL
+  || "https://script.google.com/macros/s/AKfycbwxo2lRlIh2KeR_tT65AYkqNv9HtQ63LV_uvIhd4KQyD0tEuQRxBeMiv0z2JroSnjfhTw/exec"; // ← mets ton URL
 
 // ---------- utilitaires DOM ----------
 const qs  = (s, r=document) => r.querySelector(s);
