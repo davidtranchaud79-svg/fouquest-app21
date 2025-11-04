@@ -1,130 +1,121 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>🍷 Fouquet’s Suite Joy v15.3</title>
-  <meta name="theme-color" content="#5A0D0D">
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
-
-  <style>
-    body{font-family:"Inter",sans-serif;margin:0;background:#FFF8E7;color:#3A1B1B}
-    header{background:#5A0D0D;color:#FFF8E7;padding:10px;box-shadow:0 3px 8px rgba(0,0,0,.2)}
-    .topbar-inner{display:flex;justify-content:space-between;align-items:center}
-    .brand{display:flex;align-items:center;gap:10px}
-    .brand-badge{background:#C9A227;color:#5A0D0D;width:34px;height:34px;border-radius:50%;
-      font-weight:900;display:flex;align-items:center;justify-content:center;font-size:18px}
-    .tabs{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
-    .tab{flex:1;padding:6px;border:none;border-radius:6px;background:#FFF8E7;color:#5A0D0D;font-weight:600;cursor:pointer}
-    .tab.active{background:#C9A227;color:#FFF}
-    main{padding:12px}
-    .card{background:#FFF;border-radius:10px;padding:12px;box-shadow:0 2px 6px rgba(0,0,0,.08);margin-bottom:10px}
-    .grid{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
-    .btn{background:#5A0D0D;color:#FFF8E7;border:none;padding:8px 12px;border-radius:8px;cursor:pointer}
-    .btn-entree{background:#198754}.btn-sortie{background:#DC3545}
-    .status-badge.online{background:#198754;color:#fff;padding:3px 6px;border-radius:6px}
-    .status-badge.offline{background:#DC3545;color:#fff;padding:3px 6px;border-radius:6px}
-    table{width:100%;border-collapse:collapse;margin-top:10px}th,td{border-bottom:1px solid #eee;padding:6px;text-align:left}
-  </style>
-  <script defer src="app.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🍷 Fouquet’s Suite – Gold Motion</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <div class="topbar-inner">
-      <div class="brand">
-        <div class="brand-badge">F</div>
-        <div>
-          <div style="font-weight:700">Fouquet’s Joy Suite</div>
-          <div style="font-size:11px;color:#E9D7A8">Gold Motion Edition</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span id="syncBadge" class="status-badge offline">Hors ligne</span>
-        <button class="btn" id="btnSync">⇅ Sync</button>
-      </div>
-    </div>
-    <div class="tabs">
-      <button class="tab active" data-view="dashboard">📊 Dashboard</button>
-      <button class="tab" data-view="pertes">🗑️ Pertes</button>
-      <button class="tab" data-view="invj">📦 Inv. journalier</button>
-      <button class="tab" data-view="invm">🏷️ Inv. mensuel</button>
-      <button class="tab" data-view="recettes">🍽️ Recettes</button>
-    </div>
+  <header class="header">
+    <h1>Fouquet’s Suite <span>Gold Motion</span></h1>
+    <div id="syncBadge" class="status-badge offline">Hors ligne</div>
+    <button id="btnSync" class="btn gold">⟳ Sync</button>
   </header>
 
-  <main id="app"></main>
+  <nav class="tabs">
+    <button class="tab active" data-view="dashboard">📊 Dashboard</button>
+    <button class="tab" data-view="pertes">🧾 Pertes</button>
+    <button class="tab" data-view="invj">📦 Inventaire J</button>
+    <button class="tab" data-view="invm">📅 Inventaire M</button>
+    <button class="tab" data-view="recettes">🍽️ Recettes</button>
+    <button class="tab" data-view="settings">⚙️ Paramètres</button>
+  </nav>
 
-  <!-- === Templates === -->
+  <main id="app" class="content"></main>
+
+  <!-- DASHBOARD -->
   <template id="tpl-dashboard">
-    <div class="card"><strong>Valeur stock :</strong> <span id="kpiStock">—</span> (<span id="kpiStockQte">—</span>)</div>
-    <div class="card"><strong>État du stock courant :</strong>
-      <table id="tableStockDetail"><thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Valeur (€)</th></tr></thead><tbody></tbody></table>
-    </div>
+    <section class="section glass">
+      <h2>📊 Tableau de bord</h2>
+      <div class="cards">
+        <div class="card gold"><h3 id="kpiStock">—</h3><p>Valeur totale</p></div>
+        <div class="card ivory"><h3 id="kpiStockQte">—</h3><p>Quantité totale</p></div>
+      </div>
+      <table id="tableStockDetail" class="list">
+        <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Prix</th><th>Valeur</th><th>Zone</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
   </template>
 
+  <!-- PERTES -->
   <template id="tpl-pertes">
-    <div class="card">
-      <h3>🗑️ Enregistrer une perte</h3>
-      <div class="grid">
-        <input id="pertesProduit" placeholder="Produit">
-        <input id="pertesQte" placeholder="Quantité">
-        <input id="pertesUnite" placeholder="Unité">
-        <input id="pertesMotif" placeholder="Motif">
+    <section class="section glass">
+      <h2>🧾 Déclarer une perte</h2>
+      <input id="pertesProduit" placeholder="Produit" />
+      <input id="pertesQte" type="number" placeholder="Quantité" />
+      <input id="pertesUnite" placeholder="Unité" />
+      <input id="pertesMotif" placeholder="Motif" />
+      <textarea id="pertesComment" placeholder="Commentaire..."></textarea>
+      <div class="btn-row">
+        <button id="btnSavePerte" class="btn gold">💾 Enregistrer</button>
+        <button id="btnResetPerte" class="btn">↺ Réinitialiser</button>
       </div>
-      <button class="btn" id="btnSavePerte">💾 Enregistrer</button>
-    </div>
+    </section>
   </template>
 
+  <!-- INVENTAIRE JOURNALIER -->
   <template id="tpl-invj">
-    <div class="card">
-      <h3>📦 Inventaire journalier</h3>
-      <div class="grid">
-        <input id="invjProduit" placeholder="Produit">
-        <input id="invjQte" placeholder="Quantité">
-        <input id="invjUnite" placeholder="Unité">
+    <section class="section glass">
+      <h2>📦 Inventaire journalier</h2>
+      <input id="invjProduit" placeholder="Produit" list="produitsList"/>
+      <input id="invjQte" type="number" placeholder="Quantité" />
+      <input id="invjUnite" placeholder="Unité" />
+      <div class="btn-row">
+        <button id="btnInvJEntree" class="btn gold">⬆️ Entrée</button>
+        <button id="btnInvJSortie" class="btn red">⬇️ Sortie</button>
+        <button id="btnResetInvJ" class="btn">↺</button>
       </div>
-      <div style="display:flex;gap:10px;justify-content:center;margin-top:8px">
-        <button class="btn btn-entree" id="btnInvJEntree">⬆️ Entrée</button>
-        <button class="btn btn-sortie" id="btnInvJSortie">⬇️ Sortie</button>
-      </div>
-    </div>
+    </section>
   </template>
 
+  <!-- INVENTAIRE MENSUEL -->
   <template id="tpl-invm">
-    <div class="card">
-      <h3>🏷️ Inventaire mensuel</h3>
-      <div class="grid">
-        <select id="invmZone"></select>
-        <input type="month" id="invmMois">
-        <input id="invmProduit" placeholder="Produit">
-        <input id="invmQte" placeholder="Quantité">
-        <input id="invmUnite" placeholder="Unité">
-        <input id="invmComment" placeholder="Commentaire">
+    <section class="section glass">
+      <h2>📅 Inventaire mensuel</h2>
+      <select id="invmZone"></select>
+      <input id="invmMois" placeholder="Mois (ex: 2025-11)" />
+      <input id="invmProduit" placeholder="Produit" list="produitsMensuel"/>
+      <input id="invmQte" type="number" placeholder="Quantité" />
+      <input id="invmUnite" placeholder="Unité" />
+      <textarea id="invmComment" placeholder="Commentaire..."></textarea>
+      <div class="btn-row">
+        <button id="btnInvmGenerate" class="btn gold">🗂️ Générer feuille</button>
+        <button id="btnInvmSave" class="btn green">💾 Enregistrer</button>
+        <button id="btnInvmReset" class="btn">↺</button>
       </div>
-      <button class="btn" id="btnInvmSave">💾 Enregistrer</button>
-    </div>
+    </section>
   </template>
 
+  <!-- RECETTES -->
   <template id="tpl-recettes">
-    <div class="card">
-      <h3>🍽️ Recettes</h3>
-      <div id="recettesList" class="grid"></div>
+    <section class="section glass">
+      <h2>🍽️ Recettes</h2>
+      <input id="recetteSearch" placeholder="Recherche recette..." />
+      <div id="recettesList" class="cards"></div>
       <div id="recetteDetail"></div>
-    </div>
+    </section>
   </template>
 
-  <!-- Service Worker -->
-  <script>
-    if("serviceWorker"in navigator){
-      window.addEventListener("load",()=>{
-        navigator.serviceWorker.register("./service-worker.js")
-          .then(()=>console.log("✅ Service Worker actif"))
-          .catch(e=>console.error("❌ SW :",e))
-      })
-    }
-  </script>
+  <!-- SETTINGS -->
+  <template id="tpl-settings">
+    <section class="section glass">
+      <h2>⚙️ Paramètres</h2>
+      <input id="setEtab" placeholder="Établissement" />
+      <input id="setTz" placeholder="Fuseau horaire" />
+      <input id="setEmail" placeholder="Email cost-control" />
+      <select id="setLang">
+        <option value="fr">Français</option>
+        <option value="en">English</option>
+        <option value="it">Italiano</option>
+        <option value="es">Español</option>
+      </select>
+      <button id="btnSetSave" class="btn gold">💾 Enregistrer</button>
+    </section>
+  </template>
+
+  <script src="app.js"></script>
 </body>
 </html>
