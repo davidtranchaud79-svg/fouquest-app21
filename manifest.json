@@ -1,11 +1,10 @@
 {
-  "name": "Fouquet’s Suite Joy",
-  "short_name": "Fouquet’s Joy",
+  "name": "Fouquet’s Suite Gold Motion",
+  "short_name": "Fouquet’s Suite",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#FFF8E7",
-  "theme_color": "#5A0D0D",
-  "orientation": "portrait-primary",
+  "background_color": "#5A0D0D",
+  "theme_color": "#C9A227",
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
