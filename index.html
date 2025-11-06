@@ -2,120 +2,218 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🍷 Fouquet’s Suite – Gold Motion</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fouques’t Joy • Gold Motion</title>
+  <meta name="theme-color" content="#C9A227"/>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/favicon.ico">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script defer src="app.js"></script>
 </head>
 <body>
-  <header class="header">
-    <h1>Fouquet’s Suite <span>Gold Motion</span></h1>
-    <div id="syncBadge" class="status-badge offline">Hors ligne</div>
-    <button id="btnSync" class="btn gold">⟳ Sync</button>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-badge">F</div>
+      <div class="brand-text">
+        <div class="brand-title">Fouques’t Joy</div>
+        <div class="brand-sub">Gold Motion • Ivoire & Or</div>
+      </div>
+    </div>
+    <div class="actions">
+      <span id="syncBadge" class="status-badge offline" title="Statut">Hors ligne</span>
+      <button class="btn ghost" id="btnSync">⇅ Synchroniser</button>
+    </div>
   </header>
 
   <nav class="tabs">
     <button class="tab active" data-view="dashboard">📊 Dashboard</button>
-    <button class="tab" data-view="pertes">🧾 Pertes</button>
-    <button class="tab" data-view="invj">📦 Inventaire J</button>
-    <button class="tab" data-view="invm">📅 Inventaire M</button>
+    <button class="tab" data-view="pertes">🗑️ Pertes</button>
+    <button class="tab" data-view="invj">📦 Inventaire J.</button>
+    <button class="tab" data-view="invm">🏷️ Inventaire M.</button>
     <button class="tab" data-view="recettes">🍽️ Recettes</button>
     <button class="tab" data-view="settings">⚙️ Paramètres</button>
   </nav>
 
-  <main id="app" class="content"></main>
+  <main id="app" class="container"></main>
+  <footer class="footer">© Fouques’t Joy – v15</footer>
 
   <!-- DASHBOARD -->
   <template id="tpl-dashboard">
-    <section class="section glass">
-      <h2>📊 Tableau de bord</h2>
-      <div class="cards">
-        <div class="card gold"><h3 id="kpiStock">—</h3><p>Valeur totale</p></div>
-        <div class="card ivory"><h3 id="kpiStockQte">—</h3><p>Quantité totale</p></div>
+    <section class="section">
+      <div class="grid-3">
+        <div class="card kpi">
+          <div class="kpi-title">Valeur du stock</div>
+          <div class="kpi-value" id="kpiStock">—</div>
+          <div class="kpi-sub" id="kpiStockQte">—</div>
+        </div>
+        <div class="card kpi">
+          <div class="kpi-title">Pertes (mois)</div>
+          <div class="kpi-value" id="kpiPertes">—</div>
+          <div class="kpi-sub">estimation</div>
+        </div>
+        <div class="card kpi">
+          <div class="kpi-title">Alertes seuil</div>
+          <div class="kpi-value" id="kpiSeuils">—</div>
+          <div class="kpi-sub">produits</div>
+        </div>
       </div>
-      <table id="tableStockDetail" class="list">
-        <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Prix</th><th>Valeur</th><th>Zone</th></tr></thead>
-        <tbody></tbody>
-      </table>
+
+      <div class="card">
+        <div class="card-title">📋 État du stock courant</div>
+        <table class="list" id="tableStockDetail">
+          <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Prix (€)</th><th>Valeur (€)</th><th>Zone</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Pertes – 7 jours</div>
+        <canvas id="chartPertes" height="120"></canvas>
+      </div>
     </section>
   </template>
 
   <!-- PERTES -->
   <template id="tpl-pertes">
-    <section class="section glass">
-      <h2>🧾 Déclarer une perte</h2>
-      <input id="pertesProduit" placeholder="Produit" />
-      <input id="pertesQte" type="number" placeholder="Quantité" />
-      <input id="pertesUnite" placeholder="Unité" />
-      <input id="pertesMotif" placeholder="Motif" />
-      <textarea id="pertesComment" placeholder="Commentaire..."></textarea>
-      <div class="btn-row">
-        <button id="btnSavePerte" class="btn gold">💾 Enregistrer</button>
-        <button id="btnResetPerte" class="btn">↺ Réinitialiser</button>
+    <section class="section">
+      <div class="card">
+        <div class="card-title">🗑️ Saisie des pertes</div>
+        <div class="grid">
+          <div class="input-field">
+            <label>Produit</label>
+            <input id="pertesProduit" list="dlProduitsPertes" placeholder="Choisir ou saisir" />
+            <datalist id="dlProduitsPertes"></datalist>
+          </div>
+          <div class="input-field">
+            <label>Quantité</label>
+            <input id="pertesQte" type="number" step="0.01" placeholder="Ex. 1.20"/>
+          </div>
+          <div class="input-field">
+            <label>Unité</label>
+            <input id="pertesUnite" placeholder="kg / L / pièce"/>
+          </div>
+          <div class="input-field">
+            <label>Motif</label>
+            <input id="pertesMotif" placeholder="DLUO / Casse / Surcuisson"/>
+          </div>
+          <div class="input-field">
+            <label>Commentaire</label>
+            <input id="pertesComment" placeholder="Optionnel"/>
+          </div>
+        </div>
+        <div class="row-actions">
+          <button class="btn" id="btnSavePerte">Enregistrer</button>
+          <button class="btn ghost" id="btnResetPerte">Réinitialiser</button>
+        </div>
       </div>
     </section>
   </template>
 
   <!-- INVENTAIRE JOURNALIER -->
   <template id="tpl-invj">
-    <section class="section glass">
-      <h2>📦 Inventaire journalier</h2>
-      <input id="invjProduit" placeholder="Produit" list="produitsList"/>
-      <input id="invjQte" type="number" placeholder="Quantité" />
-      <input id="invjUnite" placeholder="Unité" />
-      <div class="btn-row">
-        <button id="btnInvJEntree" class="btn gold">⬆️ Entrée</button>
-        <button id="btnInvJSortie" class="btn red">⬇️ Sortie</button>
-        <button id="btnResetInvJ" class="btn">↺</button>
+    <section class="section">
+      <div class="card">
+        <div class="card-title">📦 Inventaire journalier</div>
+        <div class="grid">
+          <div class="input-field">
+            <label>Produit</label>
+            <input id="invjProduit" list="dlProduitsInvJ" placeholder="Nom du produit"/>
+            <datalist id="dlProduitsInvJ"></datalist>
+          </div>
+          <div class="input-field">
+            <label>Quantité</label>
+            <input id="invjQte" type="number" step="0.01" placeholder="Ex. 2.50"/>
+          </div>
+          <div class="input-field">
+            <label>Unité</label>
+            <input id="invjUnite" placeholder="kg / L / pièce"/>
+          </div>
+        </div>
+        <div class="row-actions">
+          <button class="btn success" id="btnInvJEntree">⬆️ Entrée</button>
+          <button class="btn danger" id="btnInvJSortie">⬇️ Sortie</button>
+          <button class="btn ghost" id="btnResetInvJ">Réinitialiser</button>
+        </div>
       </div>
     </section>
   </template>
 
   <!-- INVENTAIRE MENSUEL -->
   <template id="tpl-invm">
-    <section class="section glass">
-      <h2>📅 Inventaire mensuel</h2>
-      <select id="invmZone"></select>
-      <input id="invmMois" placeholder="Mois (ex: 2025-11)" />
-      <input id="invmProduit" placeholder="Produit" list="produitsMensuel"/>
-      <input id="invmQte" type="number" placeholder="Quantité" />
-      <input id="invmUnite" placeholder="Unité" />
-      <textarea id="invmComment" placeholder="Commentaire..."></textarea>
-      <div class="btn-row">
-        <button id="btnInvmGenerate" class="btn gold">🗂️ Générer feuille</button>
-        <button id="btnInvmSave" class="btn green">💾 Enregistrer</button>
-        <button id="btnInvmReset" class="btn">↺</button>
+    <section class="section">
+      <div class="card">
+        <div class="card-title">🏷️ Inventaire mensuel</div>
+        <div class="grid">
+          <div class="input-field">
+            <label>Zone</label>
+            <select id="invmZone"></select>
+          </div>
+          <div class="input-field">
+            <label>Mois</label>
+            <input type="month" id="invmMois"/>
+          </div>
+          <div class="input-field">
+            <label>Produit</label>
+            <input id="invmProduit" list="dlProduitsInvM" placeholder="Nom du produit"/>
+            <datalist id="dlProduitsInvM"></datalist>
+          </div>
+          <div class="input-field">
+            <label>Quantité</label>
+            <input id="invmQte" type="number" step="0.01" placeholder="Ex. 5.00"/>
+          </div>
+          <div class="input-field">
+            <label>Unité</label>
+            <input id="invmUnite" placeholder="kg / L / pièce"/>
+          </div>
+          <div class="input-field">
+            <label>Commentaires</label>
+            <input id="invmComment" placeholder="Notes supplémentaires"/>
+          </div>
+        </div>
+        <div class="row-actions">
+          <button class="btn" id="btnInvmGenerate">📄 Générer la feuille</button>
+          <button class="btn" id="btnInvmSave">💾 Enregistrer</button>
+          <button class="btn ghost" id="btnInvmReset">Réinitialiser</button>
+        </div>
       </div>
     </section>
   </template>
 
   <!-- RECETTES -->
   <template id="tpl-recettes">
-    <section class="section glass">
-      <h2>🍽️ Recettes</h2>
-      <input id="recetteSearch" placeholder="Recherche recette..." />
-      <div id="recettesList" class="cards"></div>
-      <div id="recetteDetail"></div>
+    <section class="section">
+      <div class="card">
+        <div class="card-title">🍽️ Recettes</div>
+        <div class="input-field" style="margin-bottom:10px">
+          <label>Recherche</label>
+          <input id="recetteSearch" placeholder="Rechercher une recette...">
+        </div>
+        <div id="recettesList" class="grid-cards"></div>
+        <div id="recetteDetail" class="recette-detail"></div>
+      </div>
     </section>
   </template>
 
-  <!-- SETTINGS -->
+  <!-- PARAMÈTRES -->
   <template id="tpl-settings">
-    <section class="section glass">
-      <h2>⚙️ Paramètres</h2>
-      <input id="setEtab" placeholder="Établissement" />
-      <input id="setTz" placeholder="Fuseau horaire" />
-      <input id="setEmail" placeholder="Email cost-control" />
-      <select id="setLang">
-        <option value="fr">Français</option>
-        <option value="en">English</option>
-        <option value="it">Italiano</option>
-        <option value="es">Español</option>
-      </select>
-      <button id="btnSetSave" class="btn gold">💾 Enregistrer</button>
+    <section class="section">
+      <div class="card">
+        <div class="card-title">⚙️ Paramètres</div>
+        <div class="grid">
+          <div class="input-field"><label>Établissement</label><input id="setEtab" placeholder="Fouques’t Joy"/></div>
+          <div class="input-field"><label>Fuseau horaire</label>
+            <select id="setTz"><option>Europe/Paris</option><option>Europe/Rome</option><option>America/New_York</option></select>
+          </div>
+          <div class="input-field"><label>Email Cost-Control</label><input id="setEmail" placeholder="costcontrol@fouquets.fr"/></div>
+          <div class="input-field"><label>Langue</label>
+            <select id="setLang"><option value="fr">Français</option><option value="en">English</option><option value="it">Italiano</option><option value="es">Español</option></select>
+          </div>
+        </div>
+        <div class="row-actions"><button class="btn" id="btnSetSave">💾 Enregistrer</button></div>
+      </div>
     </section>
   </template>
-
-  <script src="app.js"></script>
 </body>
 </html>
