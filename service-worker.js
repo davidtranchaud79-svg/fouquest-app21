@@ -1,16 +1,10 @@
-const CACHE_NAME = 'fouquets-v15';
-const FILES = [
-  './',
-  './index.html',
-  './style.css',
-  './app.js',
-  './manifest.json'
-];
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(FILES)));
+self.addEventListener('install', e=>{
+  self.skipWaiting();
+  e.waitUntil(caches.open('fouquest-v15').then(c=>c.addAll(['./','./index.html','./styles.css','./app.js','./manifest.json'])));
 });
-self.addEventListener('fetch', e => {
+self.addEventListener('activate', e=> clients.claim());
+self.addEventListener('fetch', e=>{
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request))
+    caches.match(e.request).then(r=> r || fetch(e.request).catch(()=> caches.match('./index.html')))
   );
 });
