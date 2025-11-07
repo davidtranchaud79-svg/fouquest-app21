@@ -1,10 +1,10 @@
 // ============================================================
-// 🍷 Fouquet’s Joy — Gold Motion v16.1.2
-// Frontend aligné avec code.gs v16.1 (pertes en kg) + fix Inventaire M
+// 🍷 Fouquet’s Joy — Gold Motion v16.3
+// Frontend aligné avec code.gs v16.3 (unités auto + inventaire journalier)
 // ============================================================
 
 // ===== CONFIG =====
-const API_URL = "https://script.google.com/macros/s/AKfycbzgFiz79CZJcfHZEKIGt1H3KcYqg1wCAT60TKthniFfRDvJ4CcG0rSIWHULmIpmjGpd/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwjKMoB-BfJ18LM-hEKDjtVch3OMvtbLFvZY3K33yhwZJ_hFNRfbodgSm4FCs5CaPvN/exec";
 
 // ===== HELPERS =====
 const qs = (s, r=document)=>r.querySelector(s);
@@ -33,7 +33,7 @@ function setBadge(state){
   b.classList.toggle('online', state==='online');
 }
 
-// ===== NAV =====
+// ===== NAVIGATION =====
 document.addEventListener('DOMContentLoaded', ()=>{
   qsa('.tab').forEach(btn=> btn.addEventListener('click', ()=>{
     qsa('.tab').forEach(b=> b.classList.toggle('active', b===btn));
@@ -78,7 +78,7 @@ async function mountDashboard(){
       qs('#kpiPertes').textContent = `${(pertes.pertesKg || 0).toFixed(2)} kg`;
       const lab = qs('#kpiPertesLabel'); if (lab) lab.textContent = "Poids total des pertes (kg)";
     }
-  } catch(e){ /* silencieux */ }
+  } catch(e){}
 
   try{
     const detail = await api('getStockDetail');
@@ -141,47 +141,72 @@ function mountPertes(){
 }
 
 // ============================================================
-// 📦 INVENTAIRE JOURNALIER
+// 📦 INVENTAIRE JOURNALIER (unités auto depuis Sheets)
 // ============================================================
+let produitsUnites = [];
+
 async function mountInvJ(){
-  preloadProduits('dlProduitsInvJ');
+  try {
+    const d = await api('getProduitsEtUnites');
+    produitsUnites = (d.status === 'success' ? d.produits : []);
+    const dl = qs('#dlProduitsInvJ');
+    if(dl) dl.innerHTML = produitsUnites.map(p=>`<option value="${p.produit}">`).join('');
+  } catch(e){ console.warn('Produits non chargés', e); }
+
+  const inputProduit = qs('#invjProduit');
+  const inputUnite = qs('#invjUnite');
+
+  if(inputProduit){
+    inputProduit.addEventListener('input', ()=>{
+      const val = inputProduit.value.trim().toLowerCase();
+      const found = produitsUnites.find(p=>p.produit.trim().toLowerCase() === val);
+      if(found){
+        inputUnite.value = found.unite || '';
+        inputUnite.setAttribute('readonly', 'readonly');
+        inputUnite.classList.add('locked');
+      } else {
+        inputUnite.value = '';
+        inputUnite.removeAttribute('readonly');
+        inputUnite.classList.remove('locked');
+      }
+    });
+  }
+
   qs('#btnInvJEntree').addEventListener('click', ()=> handleInvJ('entree'));
   qs('#btnInvJSortie').addEventListener('click', ()=> handleInvJ('sortie'));
   qs('#btnResetInvJ').addEventListener('click', ()=> ['invjProduit','invjQte','invjUnite'].forEach(id=>qs('#'+id).value=''));
 }
+
 async function handleInvJ(type){
-  const payload = {
-    produit: qs('#invjProduit').value,
-    qte: qs('#invjQte').value,
-    unite: qs('#invjUnite').value,
-    type
-  };
-  const res = await api('inventaireJournalier', payload);
-  alert(res.status==='success' ? '✅ Mouvement ajouté' : ('❌ '+(res.message||'Erreur')));
+  const produit = qs('#invjProduit').value;
+  const qte = qs('#invjQte').value;
+  const unite = qs('#invjUnite').value;
+  if(!produit || !qte) return alert('Veuillez remplir le produit et la quantité.');
+  const res = await api('inventaireJournalier', { produit, qte, unite, type });
+  alert(res.status==='success' ? `✅ ${type==="entree"?"Entrée":"Sortie"} enregistrée` : '❌ ' + (res.message||'Erreur'));
   ['invjProduit','invjQte','invjUnite'].forEach(id=>qs('#'+id).value='');
+  qs('#invjUnite').removeAttribute('readonly');
+  qs('#invjUnite').classList.remove('locked');
 }
 
 // ============================================================
-// 🧾 INVENTAIRE MENSUEL — version simplifiée et propre
+// 🧾 INVENTAIRE MENSUEL
 // ============================================================
 async function mountInvM() {
   const section = qs('#app section');
 
-  // Charger les zones depuis Sheets
   let zones = [];
   try {
     const z = await api('zonesList');
     zones = (z.status === 'success' ? z.zones : []);
   } catch { zones = ['Général']; }
 
-  // Charger les produits disponibles
   let produits = [];
   try {
     const d = await api('getStockDetail');
     produits = (d.status === 'success' ? d.stock.map(p => p.produit) : []);
   } catch {}
 
-  // Structure unique et lisible
   section.innerHTML = `
     <div class="card invm-header">
       <div class="card-title">📦 Inventaire Mensuel</div>
@@ -219,7 +244,6 @@ async function mountInvM() {
 
   const tbody = qs('#invTable tbody');
 
-  // === Ajouter une ligne ===
   function addRow(p = '', q = '', u = '', c = '') {
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -232,11 +256,8 @@ async function mountInvM() {
     tbody.appendChild(tr);
   }
   addRow();
-
-  // === Bouton Ajouter ===
   qs('#btnAddRow').addEventListener('click', ()=> addRow());
 
-  // === Générer la feuille ===
   qs('#btnGenSheet').addEventListener('click', async ()=>{
     const res = await api('createInventaireMensuel', {
       zone: qs('#invmZone').value,
@@ -245,7 +266,6 @@ async function mountInvM() {
     alert(res.status==='success' ? '✅ Feuille générée' : '❌ ' + res.message);
   });
 
-  // === Valider l’inventaire ===
   qs('#btnSaveInv').addEventListener('click', async ()=>{
     const lignes = [];
     qsa('#invTable tbody tr').forEach(tr=>{
@@ -259,12 +279,12 @@ async function mountInvM() {
       lignes: JSON.stringify(lignes)
     });
     alert(res.status==='success' ? '✅ Inventaire enregistré' : '❌ ' + (res.message||'Erreur'));
-    if (res.status==='success') tbody.innerHTML = '', addRow(); // réinitialise proprement
+    if (res.status==='success') tbody.innerHTML = '', addRow();
   });
 }
 
 // ============================================================
-// 🍽️ RECETTES (affichage inline)
+// 🍽️ RECETTES
 // ============================================================
 async function mountRecettes(){
   try{
