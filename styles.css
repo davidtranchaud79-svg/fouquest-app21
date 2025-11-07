@@ -310,3 +310,15 @@ table.list tbody tr:hover {
   from {opacity:0; transform: translateY(-5px);}
   to {opacity:1; transform: translateY(0);}
 }
+#invTable input {
+  width: 100%;
+  padding: 4px;
+  font-size: 0.9em;
+}
+#invTable td, #invTable th {
+  text-align: left;
+}
+.btn.small {
+  font-size: 0.8em;
+  padding: 4px 8px;
+}
