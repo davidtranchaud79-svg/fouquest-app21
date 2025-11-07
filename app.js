@@ -1,6 +1,6 @@
 // ============================================================
-// 🍷 Fouquet’s Joy — Gold Motion v15.8
-// Frontend aligné avec code.gs v15.7
+// 🍷 Fouquet’s Joy — Gold Motion v16.1
+// Frontend aligné avec code.gs v16.1 (Pertes par kg)
 // ============================================================
 
 // ===== CONFIG =====
@@ -79,13 +79,29 @@ async function mountDashboard(){
     }
   }catch(e){ console.warn('Etat stock', e); }
 
+  // 🔸 Récupération des pertes (kg)
+  try {
+    const pertes = await api('getPertesPoids');
+    if(pertes.status === 'success'){
+      qs('#kpiPertes').textContent = `${(pertes.pertesKg || 0).toFixed(2)} kg`;
+      qs('#kpiPertesLabel').textContent = "Poids total des pertes (kg)";
+    } else {
+      qs('#kpiPertes').textContent = "—";
+      qs('#kpiPertesLabel').textContent = "Pertes indisponibles";
+    }
+  } catch(e){
+    qs('#kpiPertes').textContent = "—";
+    qs('#kpiPertesLabel').textContent = "Erreur lecture pertes";
+  }
+
+  // 🔹 Détail du stock
   try{
     const detail = await api('getStockDetail');
     const tbody = qs('#tableStockDetail tbody');
     if(!tbody) return;
     tbody.innerHTML = '';
     if(detail.status==='success' || Array.isArray(detail)){
-      const stockList = detail.stock || detail; // compatible avec ton code.gs
+      const stockList = detail.stock || detail;
       stockList.forEach(it=>{
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${it.produit||''}</td>
@@ -96,18 +112,19 @@ async function mountDashboard(){
           <td>${it.zone||''}</td>`;
         tbody.appendChild(tr);
       });
-    }else{
+    } else {
       tbody.innerHTML = '<tr><td colspan="6">Aucune donnée</td></tr>';
     }
   }catch(e){ console.warn('Stock detail', e); }
 
+  // 🔸 Graphique placeholder
   const ctx = qs('#chartPertes');
   if(ctx && window.Chart){
     new Chart(ctx, {
       type:'bar',
       data:{
         labels:['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'],
-        datasets:[{ label:'Pertes €', data:[50,80,60,120,90,140,110], backgroundColor:'#C9A227' }]
+        datasets:[{ label:'Pertes (kg)', data:[4,5.5,3,6.2,4.8,7.1,5.6], backgroundColor:'#C9A227' }]
       },
       options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
     });
@@ -166,7 +183,9 @@ async function handleInvJ(type){
   ['invjProduit','invjQte','invjUnite'].forEach(id=>qs('#'+id).value='');
 }
 
-// ===== INVENTAIRE MENSUEL – Tableau dynamique =====
+// ============================================================
+// 🧾 INVENTAIRE MENSUEL (tableau dynamique)
+// ============================================================
 async function mountInvM() {
   const zoneSelect = qs('#invmZone');
   const moisInput = qs('#invmMois');
@@ -174,20 +193,17 @@ async function mountInvM() {
   tableContainer.className = 'card';
   qs('#app section').appendChild(tableContainer);
 
-  // zones dynamiques
   try {
     const z = await api('zonesList');
     zoneSelect.innerHTML = (z.status==='success' ? z.zones : []).map(v=>`<option>${v}</option>`).join('');
   } catch(e) { zoneSelect.innerHTML = '<option>Général</option>'; }
 
-  // produits dynamiques
   let produits = [];
   try {
     const d = await api('getStockDetail');
     produits = (d.status==='success' ? d.stock.map(p=>p.produit) : []);
   } catch(_){}
 
-  // structure du tableau
   tableContainer.innerHTML = `
     <div class="card-title">📋 Inventaire – ${zoneSelect.value || 'Zone'} ${moisInput.value || ''}</div>
     <table class="list" id="invTable">
@@ -202,33 +218,25 @@ async function mountInvM() {
   `;
 
   const tbody = tableContainer.querySelector('tbody');
-
-  // Fonction pour ajouter une ligne de saisie
-  function addRow(produit='', qte='', unite='', comment='') {
+  function addRow(p='',q='',u='',c='') {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input list="dlProduitsInvM" value="${produit}" placeholder="Produit"></td>
-      <td><input type="number" step="0.01" value="${qte}" placeholder="0.00"></td>
-      <td><input value="${unite}" placeholder="kg / L / pcs"></td>
-      <td><input value="${comment}" placeholder="Commentaire"></td>
+      <td><input list="dlProduitsInvM" value="${p}" placeholder="Produit"></td>
+      <td><input type="number" step="0.01" value="${q}" placeholder="0.00"></td>
+      <td><input value="${u}" placeholder="kg / L / pcs"></td>
+      <td><input value="${c}" placeholder="Commentaire"></td>
       <td><button class="btn danger small">✖</button></td>
     `;
     tr.querySelector('button').addEventListener('click', ()=> tr.remove());
     tbody.appendChild(tr);
   }
 
-  // ajouter au moins une ligne par défaut
   addRow();
-
-  // gestion des boutons
   qs('#btnAddRow').addEventListener('click', ()=> addRow());
 
   qs('#btnGenSheet').addEventListener('click', async ()=>{
-    const payload = { zone: zoneSelect.value, mois: moisInput.value };
-    try {
-      const res = await api('createInventaireMensuel', payload);
-      alert(res.status==='success' ? '✅ Feuille créée' : res.message);
-    } catch(e){ alert('❌ Erreur de génération'); }
+    const res = await api('createInventaireMensuel', { zone: zoneSelect.value, mois: moisInput.value });
+    alert(res.status==='success' ? '✅ Feuille créée' : res.message);
   });
 
   qs('#btnSaveInv').addEventListener('click', async ()=>{
@@ -237,21 +245,15 @@ async function mountInvM() {
       const [p,q,u,c] = qsa('input', tr).map(i=>i.value);
       if(p && q) lignes.push({produit:p, qte:q, unite:u, comment:c});
     });
-
     if(!lignes.length) return alert('Aucune ligne saisie.');
-    const payload = {
-      zone: zoneSelect.value,
-      mois: moisInput.value,
-      lignes: JSON.stringify(lignes)
-    };
-    try {
-      const res = await api('saveInventaireMensuelBatch', payload);
-      alert(res.status==='success' ? '✅ Inventaire enregistré' : res.message);
-    } catch(e){ alert('❌ Erreur réseau'); }
+    const res = await api('saveInventaireMensuelBatch', { zone: zoneSelect.value, mois: moisInput.value, lignes: JSON.stringify(lignes) });
+    alert(res.status==='success' ? '✅ Inventaire enregistré' : res.message);
   });
 }
 
-// ===== RECETTES =====
+// ============================================================
+// 🍽️ RECETTES (affichage inline)
+// ============================================================
 async function mountRecettes(){
   try{
     const res = await api('getRecettes');
@@ -264,60 +266,29 @@ async function mountRecettes(){
             <div class="muted">${r.categorie||''} • base ${r.portions||1} p.</div>
           </div>
           <div class="recette-detail" style="display:none;"></div>
-        </div>
-      `).join('');
+        </div>`).join('');
 
       qsa('.recette-card', list).forEach(card=>{
         card.addEventListener('click', async ()=>{
           const detail = card.querySelector('.recette-detail');
-
-          // toggle : referme si déjà ouvert
-          if(detail.style.display==='block'){
-            detail.style.display='none';
-            detail.innerHTML='';
-            return;
-          }
-
-          // referme les autres
-          qsa('.recette-detail').forEach(d=>{
-            d.style.display='none';
-            d.innerHTML='';
-          });
-
-          // charge la recette
-          detail.innerHTML = '<div class="muted">Chargement...</div>';
-          detail.style.display='block';
-
-          try{
-            const r = await api('getRecette', {code: card.dataset.code});
-            if(r.status!=='success'){ 
-              detail.innerHTML = '<div class="muted">Recette introuvable.</div>'; 
-              return;
-            }
-            const rec = r.recette;
-            detail.innerHTML = `
-              <div class="recette-body">
-                <table class="list mini">
-                  <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Zone</th></tr></thead>
-                  <tbody>
-                    ${(rec.ingredients||[]).map(i=>`
-                      <tr>
-                        <td>${i.produit}</td>
-                        <td>${Number(i.quantite).toFixed(2)}</td>
-                        <td>${i.unite}</td>
-                        <td>${i.zone||''}</td>
-                      </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-              </div>`;
-          }catch(e){
-            detail.innerHTML = '<div class="muted">Erreur de chargement.</div>';
-          }
+          if(detail.style.display==='block'){ detail.style.display='none'; detail.innerHTML=''; return; }
+          qsa('.recette-detail').forEach(d=>{d.style.display='none'; d.innerHTML='';});
+          detail.innerHTML = '<div class="muted">Chargement...</div>'; detail.style.display='block';
+          const r = await api('getRecette', {code: card.dataset.code});
+          if(r.status!=='success'){ detail.innerHTML='<div class="muted">Recette introuvable.</div>'; return; }
+          const rec = r.recette;
+          detail.innerHTML = `
+            <div class="recette-body">
+              <table class="list mini">
+                <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Zone</th></tr></thead>
+                <tbody>${(rec.ingredients||[]).map(i=>`
+                  <tr><td>${i.produit}</td><td>${Number(i.quantite).toFixed(2)}</td><td>${i.unite}</td><td>${i.zone||''}</td></tr>`).join('')}
+                </tbody>
+              </table>
+            </div>`;
         });
       });
 
-      // 🔍 Recherche instantanée
       qs('#recetteSearch').addEventListener('input', e=>{
         const q = e.target.value.toLowerCase();
         qsa('.recette-card', list).forEach(c=>{
@@ -325,14 +296,11 @@ async function mountRecettes(){
           c.style.display = name.includes(q) ? '' : 'none';
         });
       });
-    }else{
-      list.innerHTML = '<div class="muted">Aucune recette.</div>';
-    }
+    } else list.innerHTML = '<div class="muted">Aucune recette.</div>';
   }catch(e){
     qs('#recettesList').innerHTML = '<div class="muted">Erreur de chargement.</div>';
   }
 }
-
 
 // ============================================================
 // ⚙️ PARAMÈTRES
