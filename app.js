@@ -184,41 +184,71 @@ async function handleInvJ(type){
 }
 
 // ============================================================
-// 🧾 INVENTAIRE MENSUEL (tableau dynamique)
+// 🧾 INVENTAIRE MENSUEL – structure claire et ergonomique
 // ============================================================
 async function mountInvM() {
   const zoneSelect = qs('#invmZone');
   const moisInput = qs('#invmMois');
-  const tableContainer = document.createElement('div');
-  tableContainer.className = 'card';
-  qs('#app section').appendChild(tableContainer);
 
+  // Charger les zones disponibles
   try {
     const z = await api('zonesList');
-    zoneSelect.innerHTML = (z.status==='success' ? z.zones : []).map(v=>`<option>${v}</option>`).join('');
-  } catch(e) { zoneSelect.innerHTML = '<option>Général</option>'; }
+    zoneSelect.innerHTML = (z.status === 'success' ? z.zones : []).map(v => `<option>${v}</option>`).join('');
+  } catch(e) {
+    zoneSelect.innerHTML = '<option>Général</option>';
+  }
 
+  // Charger la liste des produits
   let produits = [];
   try {
     const d = await api('getStockDetail');
-    produits = (d.status==='success' ? d.stock.map(p=>p.produit) : []);
+    produits = (d.status === 'success' ? d.stock.map(p => p.produit) : []);
   } catch(_){}
 
-  tableContainer.innerHTML = `
-    <div class="card-title">📋 Inventaire – ${zoneSelect.value || 'Zone'} ${moisInput.value || ''}</div>
-    <table class="list" id="invTable">
-      <thead><tr><th>Produit</th><th>Quantité</th><th>Unité</th><th>Commentaire</th><th></th></tr></thead>
-      <tbody></tbody>
-    </table>
-    <div class="row-actions">
-      <button class="btn ghost" id="btnAddRow">➕ Ajouter une ligne</button>
-      <button class="btn" id="btnSaveInv">💾 Valider l’inventaire</button>
-      <button class="btn" id="btnGenSheet">📄 Générer la feuille</button>
+  // === Structure de la page ===
+  const section = qs('#app section');
+  section.innerHTML = `
+    <div class="card invm-header">
+      <div class="card-title">🏷️ Inventaire Mensuel</div>
+      <div class="invm-header-grid">
+        <div class="input-field">
+          <label for="invmZone">Zone</label>
+          <select id="invmZone">${(zoneSelect.innerHTML || '')}</select>
+        </div>
+        <div class="input-field">
+          <label for="invmMois">Mois</label>
+          <input type="month" id="invmMois" value="${moisInput.value || ''}"/>
+        </div>
+        <div class="input-field center">
+          <button class="btn gold large" id="btnInvmGenerate">📄 Générer la feuille</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card invm-body">
+      <div class="card-subtitle">📋 Feuille d’inventaire</div>
+      <table class="list" id="invTable">
+        <thead>
+          <tr><th>Produit</th><th>Quantité</th><th>Unité</th><th>Commentaire</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="row-actions center">
+        <button class="btn ghost" id="btnAddRow">➕ Ajouter une ligne</button>
+      </div>
+    </div>
+
+    <div class="card invm-footer">
+      <div class="row-actions center">
+        <button class="btn success large" id="btnSaveInv">💾 Valider l’inventaire</button>
+      </div>
     </div>
   `;
 
-  const tbody = tableContainer.querySelector('tbody');
-  function addRow(p='',q='',u='',c='') {
+  // === Gestion du tableau ===
+  const tbody = qs('#invTable tbody');
+
+  function addRow(p = '', q = '', u = '', c = '') {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><input list="dlProduitsInvM" value="${p}" placeholder="Produit"></td>
@@ -227,27 +257,40 @@ async function mountInvM() {
       <td><input value="${c}" placeholder="Commentaire"></td>
       <td><button class="btn danger small">✖</button></td>
     `;
-    tr.querySelector('button').addEventListener('click', ()=> tr.remove());
+    tr.querySelector('button').addEventListener('click', () => tr.remove());
     tbody.appendChild(tr);
   }
 
+  // Ligne par défaut
   addRow();
-  qs('#btnAddRow').addEventListener('click', ()=> addRow());
 
-  qs('#btnGenSheet').addEventListener('click', async ()=>{
-    const res = await api('createInventaireMensuel', { zone: zoneSelect.value, mois: moisInput.value });
-    alert(res.status==='success' ? '✅ Feuille créée' : res.message);
+  // Boutons
+  qs('#btnAddRow').addEventListener('click', () => addRow());
+
+  qs('#btnInvmGenerate').addEventListener('click', async () => {
+    const res = await api('createInventaireMensuel', {
+      zone: qs('#invmZone').value,
+      mois: qs('#invmMois').value
+    });
+    alert(res.status === 'success' ? '✅ Feuille créée' : '❌ ' + res.message);
   });
 
-  qs('#btnSaveInv').addEventListener('click', async ()=>{
+  qs('#btnSaveInv').addEventListener('click', async () => {
     const lignes = [];
-    qsa('tbody tr', tableContainer).forEach(tr=>{
-      const [p,q,u,c] = qsa('input', tr).map(i=>i.value);
-      if(p && q) lignes.push({produit:p, qte:q, unite:u, comment:c});
+    qsa('tbody tr', tbody).forEach(tr => {
+      const [p, q, u, c] = qsa('input', tr).map(i => i.value);
+      if(p && q) lignes.push({ produit: p, qte: q, unite: u, comment: c });
     });
     if(!lignes.length) return alert('Aucune ligne saisie.');
-    const res = await api('saveInventaireMensuelBatch', { zone: zoneSelect.value, mois: moisInput.value, lignes: JSON.stringify(lignes) });
-    alert(res.status==='success' ? '✅ Inventaire enregistré' : res.message);
+
+    const payload = {
+      zone: qs('#invmZone').value,
+      mois: qs('#invmMois').value,
+      lignes: JSON.stringify(lignes)
+    };
+
+    const res = await api('saveInventaireMensuelBatch', payload);
+    alert(res.status === 'success' ? '✅ Inventaire enregistré' : '❌ ' + res.message);
   });
 }
 
