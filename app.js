@@ -201,9 +201,7 @@ async function mountInvM(){
   qs('#btnInvmReset').addEventListener('click', ()=>['invmMois','invmProduit','invmQte','invmUnite','invmComment'].forEach(id=>qs('#'+id).value=''));
 }
 
-// ============================================================
-// 🍽️ RECETTES
-// ============================================================
+// ===== RECETTES =====
 async function mountRecettes(){
   try{
     const res = await api('getRecettes');
@@ -211,40 +209,80 @@ async function mountRecettes(){
     if(res.status==='success'){
       list.innerHTML = res.recettes.map(r=>`
         <div class="card recette-card" data-code="${r.code}">
-          <div><strong>${r.nom}</strong><div class="muted">${r.categorie||''} • base ${r.portions||1} p.</div></div>
-          <button class="btn ghost">Voir</button>
-        </div>`).join('');
-      qsa('.recette-card', list).forEach(div=>{
-        div.querySelector('button').addEventListener('click', ()=> loadRecette(div.dataset.code));
+          <div class="recette-header">
+            <strong>${r.nom}</strong>
+            <div class="muted">${r.categorie||''} • base ${r.portions||1} p.</div>
+          </div>
+          <div class="recette-detail" style="display:none;"></div>
+        </div>
+      `).join('');
+
+      qsa('.recette-card', list).forEach(card=>{
+        card.addEventListener('click', async ()=>{
+          const detail = card.querySelector('.recette-detail');
+
+          // toggle : referme si déjà ouvert
+          if(detail.style.display==='block'){
+            detail.style.display='none';
+            detail.innerHTML='';
+            return;
+          }
+
+          // referme les autres
+          qsa('.recette-detail').forEach(d=>{
+            d.style.display='none';
+            d.innerHTML='';
+          });
+
+          // charge la recette
+          detail.innerHTML = '<div class="muted">Chargement...</div>';
+          detail.style.display='block';
+
+          try{
+            const r = await api('getRecette', {code: card.dataset.code});
+            if(r.status!=='success'){ 
+              detail.innerHTML = '<div class="muted">Recette introuvable.</div>'; 
+              return;
+            }
+            const rec = r.recette;
+            detail.innerHTML = `
+              <div class="recette-body">
+                <table class="list mini">
+                  <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Zone</th></tr></thead>
+                  <tbody>
+                    ${(rec.ingredients||[]).map(i=>`
+                      <tr>
+                        <td>${i.produit}</td>
+                        <td>${Number(i.quantite).toFixed(2)}</td>
+                        <td>${i.unite}</td>
+                        <td>${i.zone||''}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>`;
+          }catch(e){
+            detail.innerHTML = '<div class="muted">Erreur de chargement.</div>';
+          }
+        });
       });
-      qs('#recetteSearch').addEventListener('input', (e)=>{
+
+      // 🔍 Recherche instantanée
+      qs('#recetteSearch').addEventListener('input', e=>{
         const q = e.target.value.toLowerCase();
         qsa('.recette-card', list).forEach(c=>{
           const name = c.querySelector('strong').textContent.toLowerCase();
           c.style.display = name.includes(q) ? '' : 'none';
         });
       });
-    }else list.innerHTML = '<div class="muted">Aucune recette.</div>';
-  }catch(_){}
+    }else{
+      list.innerHTML = '<div class="muted">Aucune recette.</div>';
+    }
+  }catch(e){
+    qs('#recettesList').innerHTML = '<div class="muted">Erreur de chargement.</div>';
+  }
 }
 
-async function loadRecette(code){
-  const d = qs('#recetteDetail'); d.innerHTML = '';
-  const r = await api('getRecette', {code});
-  if(r.status!=='success'){ d.textContent='Recette introuvable.'; return; }
-  const rec = r.recette;
-  d.innerHTML = `
-    <div class="card">
-      <h3>${rec.nom}</h3>
-      <div class="muted">Base ${rec.portions||1} portions</div>
-      <table class="list">
-        <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Zone</th></tr></thead>
-        <tbody>${(rec.ingredients||[]).map(i=>`
-          <tr><td>${i.produit}</td><td>${i.quantite}</td><td>${i.unite}</td><td>${i.zone||''}</td></tr>`).join('')}
-        </tbody>
-      </table>
-    </div>`;
-}
 
 // ============================================================
 // ⚙️ PARAMÈTRES
