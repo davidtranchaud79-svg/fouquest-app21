@@ -4,7 +4,7 @@
 // ============================================================
 
 // ===== CONFIG =====
-const API_URL = "https://script.google.com/macros/s/AKfycbyMppxq_f0XzgvR68hNbjxAkpW506xEvG5Oaxj9kysqGI6G_E1e-Ft9g2rhHCmf8bFw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzgFiz79CZJcfHZEKIGt1H3KcYqg1wCAT60TKthniFfRDvJ4CcG0rSIWHULmIpmjGpd/exec";
 
 // ===== HELPERS =====
 const qs = (s, r=document)=>r.querySelector(s);
