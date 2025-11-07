@@ -288,3 +288,25 @@ table.list tbody tr:hover {
   .card { padding: 0.8em; }
   table.list th, table.list td { padding: 0.4em; }
 }
+.recette-card {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.recette-card:hover {
+  background: rgba(201,162,39,0.08);
+}
+.recette-detail {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid rgba(0,0,0,0.1);
+  animation: fadeIn 0.25s ease;
+}
+.recette-detail table.mini th, 
+.recette-detail table.mini td {
+  padding: 4px 6px;
+  font-size: 0.9em;
+}
+@keyframes fadeIn {
+  from {opacity:0; transform: translateY(-5px);}
+  to {opacity:1; transform: translateY(0);}
+}
