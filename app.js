@@ -162,55 +162,65 @@ async function handleInvJ(type){
 }
 
 // ============================================================
-// 🧾 INVENTAIRE MENSUEL — structure + liaison propre
+// 🧾 INVENTAIRE MENSUEL — version simplifiée et propre
 // ============================================================
 async function mountInvM() {
-  const zoneSelect = qs('#invmZone');
-  const moisInput  = qs('#invmMois');
-  const section    = qs('#app section');
+  const section = qs('#app section');
 
-  // 1) Remplir les ZONES
+  // Charger les zones depuis Sheets
+  let zones = [];
   try {
     const z = await api('zonesList');
-    zoneSelect.innerHTML = (z.status==='success' ? z.zones : []).map(v=>`<option>${v}</option>`).join('');
-  } catch(e) { zoneSelect.innerHTML = '<option>Général</option>'; }
+    zones = (z.status === 'success' ? z.zones : []);
+  } catch { zones = ['Général']; }
 
-  // 2) Assurer le datalist PRODUITS (ne pas casser le DOM)
+  // Charger les produits disponibles
   let produits = [];
   try {
     const d = await api('getStockDetail');
-    produits = (d.status==='success' ? d.stock.map(p=>p.produit) : []);
-  } catch(_){}
-  const dl = qs('#dlProduitsInvM') || (()=>{ // si jamais absent, on le crée
-    const dlc = document.createElement('datalist');
-    dlc.id = 'dlProduitsInvM';
-    section.appendChild(dlc);
-    return dlc;
-  })();
-  dl.innerHTML = produits.map(p=>`<option value="${p}">`).join('');
+    produits = (d.status === 'success' ? d.stock.map(p => p.produit) : []);
+  } catch {}
 
-  // 3) Construire le tableau sous le formulaire (sans remplacer la section)
-  const old = qs('#inv-month-card');
-  if (old) old.remove();
-  const card = document.createElement('div');
-  card.className = 'card';
-  card.id = 'inv-month-card';
-  card.innerHTML = `
-    <div class="card-title">📋 Feuille d’inventaire — ${zoneSelect.value || 'Zone'} ${moisInput.value || ''}</div>
-    <table class="list" id="invTable">
-      <thead><tr><th>Produit</th><th>Quantité</th><th>Unité</th><th>Commentaire</th><th></th></tr></thead>
-      <tbody></tbody>
-    </table>
-    <div class="row-actions center">
-      <button class="btn ghost" id="btnAddRow">➕ Ajouter une ligne</button>
-      <button class="btn" id="btnGenSheet">📄 Générer la feuille</button>
-      <button class="btn success" id="btnSaveInv">💾 Valider l’inventaire</button>
-    </div>`;
-  section.appendChild(card);
+  // Structure unique et lisible
+  section.innerHTML = `
+    <div class="card invm-header">
+      <div class="card-title">📦 Inventaire Mensuel</div>
+      <div class="grid" style="align-items:end;">
+        <div class="input-field">
+          <label>Zone</label>
+          <select id="invmZone">${zones.map(z=>`<option>${z}</option>`).join('')}</select>
+        </div>
+        <div class="input-field">
+          <label>Mois</label>
+          <input type="month" id="invmMois" value="${new Date().toISOString().slice(0,7)}"/>
+        </div>
+        <div class="input-field">
+          <button class="btn" id="btnGenSheet">📄 Générer la feuille</button>
+        </div>
+      </div>
+    </div>
 
-  const tbody = card.querySelector('tbody');
+    <div class="card invm-body">
+      <div class="card-title">📋 Feuille d’inventaire</div>
+      <table class="list" id="invTable">
+        <thead><tr><th>Produit</th><th>Quantité</th><th>Unité</th><th>Commentaire</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="row-actions center">
+        <button class="btn ghost" id="btnAddRow">➕ Ajouter une ligne</button>
+        <button class="btn success" id="btnSaveInv">💾 Valider l’inventaire</button>
+      </div>
+    </div>
 
-  function addRow(p='',q='',u='',c='') {
+    <datalist id="dlProduitsInvM">
+      ${produits.map(p => `<option value="${p}">`).join('')}
+    </datalist>
+  `;
+
+  const tbody = qs('#invTable tbody');
+
+  // === Ajouter une ligne ===
+  function addRow(p = '', q = '', u = '', c = '') {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><input list="dlProduitsInvM" value="${p}" placeholder="Produit"></td>
@@ -223,22 +233,33 @@ async function mountInvM() {
   }
   addRow();
 
-  // 4) Boutons
-  card.querySelector('#btnAddRow').addEventListener('click', ()=> addRow());
-  card.querySelector('#btnGenSheet').addEventListener('click', async ()=>{
-    const res = await api('createInventaireMensuel', { zone: zoneSelect.value, mois: moisInput.value });
-    alert(res.status==='success' ? '✅ Feuille créée' : ('❌ '+res.message));
+  // === Bouton Ajouter ===
+  qs('#btnAddRow').addEventListener('click', ()=> addRow());
+
+  // === Générer la feuille ===
+  qs('#btnGenSheet').addEventListener('click', async ()=>{
+    const res = await api('createInventaireMensuel', {
+      zone: qs('#invmZone').value,
+      mois: qs('#invmMois').value
+    });
+    alert(res.status==='success' ? '✅ Feuille générée' : '❌ ' + res.message);
   });
-  card.querySelector('#btnSaveInv').addEventListener('click', async ()=>{
+
+  // === Valider l’inventaire ===
+  qs('#btnSaveInv').addEventListener('click', async ()=>{
     const lignes = [];
-    qsa('tbody tr', card).forEach(tr=>{
+    qsa('#invTable tbody tr').forEach(tr=>{
       const [p,q,u,c] = qsa('input', tr).map(i=>i.value);
       if(p && q) lignes.push({produit:p, qte:q, unite:u, comment:c});
     });
     if(!lignes.length) return alert('Aucune ligne saisie.');
-    const res = await api('saveInventaireMensuelBatch', { zone: zoneSelect.value, mois: moisInput.value, lignes: JSON.stringify(lignes) });
-    alert(res.status==='success' ? '✅ Inventaire enregistré' : ('❌ '+res.message));
-    if (res.status==='success'){ tbody.innerHTML=''; addRow(); } // reset clair après validation
+    const res = await api('saveInventaireMensuelBatch', {
+      zone: qs('#invmZone').value,
+      mois: qs('#invmMois').value,
+      lignes: JSON.stringify(lignes)
+    });
+    alert(res.status==='success' ? '✅ Inventaire enregistré' : '❌ ' + (res.message||'Erreur'));
+    if (res.status==='success') tbody.innerHTML = '', addRow(); // réinitialise proprement
   });
 }
 
