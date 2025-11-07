@@ -1,6 +1,6 @@
 // ============================================================
-// 🍷 Fouquet’s Joy — Gold Motion v16.1
-// Frontend aligné avec code.gs v16.1 (Pertes par kg)
+// 🍷 Fouquet’s Joy — Gold Motion v16.1.2
+// Frontend aligné avec code.gs v16.1 (pertes en kg) + fix Inventaire M
 // ============================================================
 
 // ===== CONFIG =====
@@ -9,26 +9,22 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyMppxq_f0XzgvR68hNbjxA
 // ===== HELPERS =====
 const qs = (s, r=document)=>r.querySelector(s);
 const qsa = (s, r=document)=>[...r.querySelectorAll(s)];
-
 function serialize(params){
   const u = new URLSearchParams();
   Object.entries(params).forEach(([k,v])=> u.append(k, v==null?'':String(v)));
   return u.toString();
 }
-
 async function api(action, params={}){
   const url = `${API_URL}?${serialize({action, ...params})}`;
   try {
     const r = await fetch(url, { method:'GET', cache:'no-store' });
     if(!r.ok) throw new Error('HTTP '+r.status);
-    const data = await r.json();
-    return data;
+    return await r.json();
   } catch(e) {
     console.error("Erreur API", e);
     return { status:"error", message:e.message };
   }
 }
-
 function setBadge(state){
   const b = qs('#syncBadge');
   if(!b) return;
@@ -47,12 +43,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
   render('dashboard');
   checkConnection();
 });
-
 async function checkConnection(){
-  try{
-    const res = await api('ping');
-    setBadge(res.status==='success' ? 'online' : 'error');
-  }catch(_){ setBadge('error'); }
+  const res = await api('ping');
+  setBadge(res.status==='success' ? 'online' : 'error');
 }
 
 // ===== RENDER =====
@@ -79,52 +72,39 @@ async function mountDashboard(){
     }
   }catch(e){ console.warn('Etat stock', e); }
 
-  // 🔸 Récupération des pertes (kg)
   try {
     const pertes = await api('getPertesPoids');
     if(pertes.status === 'success'){
       qs('#kpiPertes').textContent = `${(pertes.pertesKg || 0).toFixed(2)} kg`;
-      qs('#kpiPertesLabel').textContent = "Poids total des pertes (kg)";
-    } else {
-      qs('#kpiPertes').textContent = "—";
-      qs('#kpiPertesLabel').textContent = "Pertes indisponibles";
+      const lab = qs('#kpiPertesLabel'); if (lab) lab.textContent = "Poids total des pertes (kg)";
     }
-  } catch(e){
-    qs('#kpiPertes').textContent = "—";
-    qs('#kpiPertesLabel').textContent = "Erreur lecture pertes";
-  }
+  } catch(e){ /* silencieux */ }
 
-  // 🔹 Détail du stock
   try{
     const detail = await api('getStockDetail');
     const tbody = qs('#tableStockDetail tbody');
     if(!tbody) return;
+    const stockList = detail.stock || detail;
     tbody.innerHTML = '';
-    if(detail.status==='success' || Array.isArray(detail)){
-      const stockList = detail.stock || detail;
-      stockList.forEach(it=>{
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${it.produit||''}</td>
-          <td style="text-align:right">${Number(it.quantite||0)}</td>
-          <td>${it.unite||''}</td>
-          <td style="text-align:right">${Number(it.prix||0).toFixed(2)}</td>
-          <td style="text-align:right">${Number(it.valeur||0).toFixed(2)}</td>
-          <td>${it.zone||''}</td>`;
-        tbody.appendChild(tr);
-      });
-    } else {
-      tbody.innerHTML = '<tr><td colspan="6">Aucune donnée</td></tr>';
-    }
+    (Array.isArray(stockList) ? stockList : []).forEach(it=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${it.produit||''}</td>
+        <td style="text-align:right">${Number(it.quantite||0)}</td>
+        <td>${it.unite||''}</td>
+        <td style="text-align:right">${Number(it.prix||0).toFixed(2)}</td>
+        <td style="text-align:right">${Number(it.valeur||0).toFixed(2)}</td>
+        <td>${it.zone||''}</td>`;
+      tbody.appendChild(tr);
+    });
   }catch(e){ console.warn('Stock detail', e); }
 
-  // 🔸 Graphique placeholder
   const ctx = qs('#chartPertes');
   if(ctx && window.Chart){
     new Chart(ctx, {
       type:'bar',
       data:{
         labels:['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'],
-        datasets:[{ label:'Pertes (kg)', data:[4,5.5,3,6.2,4.8,7.1,5.6], backgroundColor:'#C9A227' }]
+        datasets:[{ label:'Pertes (kg)', data:[4,5.5,3,6.2,4.8,7.1,5.6] }]
       },
       options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
     });
@@ -143,7 +123,6 @@ async function preloadProduits(datalistId){
     dl.innerHTML = (Array.isArray(stockList) ? stockList.map(p=>`<option value="${p.produit}">`).join('') : '');
   }catch(_){}
 }
-
 function mountPertes(){
   preloadProduits('dlProduitsPertes');
   qs('#btnSavePerte').addEventListener('click', async ()=>{
@@ -170,7 +149,6 @@ async function mountInvJ(){
   qs('#btnInvJSortie').addEventListener('click', ()=> handleInvJ('sortie'));
   qs('#btnResetInvJ').addEventListener('click', ()=> ['invjProduit','invjQte','invjUnite'].forEach(id=>qs('#'+id).value=''));
 }
-
 async function handleInvJ(type){
   const payload = {
     produit: qs('#invjProduit').value,
@@ -184,150 +162,84 @@ async function handleInvJ(type){
 }
 
 // ============================================================
-// 🧾 INVENTAIRE MENSUEL – structure claire et ergonomique
+// 🧾 INVENTAIRE MENSUEL — structure + liaison propre
 // ============================================================
 async function mountInvM() {
   const zoneSelect = qs('#invmZone');
-  const moisInput = qs('#invmMois');
+  const moisInput  = qs('#invmMois');
+  const section    = qs('#app section');
 
-  // Charger les zones disponibles
+  // 1) Remplir les ZONES
   try {
     const z = await api('zonesList');
-    zoneSelect.innerHTML = (z.status === 'success' ? z.zones : []).map(v => `<option>${v}</option>`).join('');
-  } catch(e) {
-    zoneSelect.innerHTML = '<option>Général</option>';
-  }
+    zoneSelect.innerHTML = (z.status==='success' ? z.zones : []).map(v=>`<option>${v}</option>`).join('');
+  } catch(e) { zoneSelect.innerHTML = '<option>Général</option>'; }
 
-  // Charger la liste des produits
+  // 2) Assurer le datalist PRODUITS (ne pas casser le DOM)
   let produits = [];
   try {
     const d = await api('getStockDetail');
-    produits = (d.status === 'success' ? d.stock.map(p => p.produit) : []);
+    produits = (d.status==='success' ? d.stock.map(p=>p.produit) : []);
   } catch(_){}
+  const dl = qs('#dlProduitsInvM') || (()=>{ // si jamais absent, on le crée
+    const dlc = document.createElement('datalist');
+    dlc.id = 'dlProduitsInvM';
+    section.appendChild(dlc);
+    return dlc;
+  })();
+  dl.innerHTML = produits.map(p=>`<option value="${p}">`).join('');
 
-  // === Structure de la page ===
-  const section = qs('#app section');
-  section.innerHTML = `
-    <div class="card invm-header">
-      <div class="card-title">🏷️ Inventaire Mensuel</div>
-      <div class="invm-header-grid">
-        <div class="input-field">
-          <label for="invmZone">Zone</label>
-          <select id="invmZone">${(zoneSelect.innerHTML || '')}</select>
-        </div>
-        <div class="input-field">
-          <label for="invmMois">Mois</label>
-          <input type="month" id="invmMois" value="${moisInput.value || ''}"/>
-        </div>
-        <div class="input-field center">
-          <button class="btn gold large" id="btnInvmGenerate">📄 Générer la feuille</button>
-        </div>
-      </div>
-    </div>
+  // 3) Construire le tableau sous le formulaire (sans remplacer la section)
+  const old = qs('#inv-month-card');
+  if (old) old.remove();
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.id = 'inv-month-card';
+  card.innerHTML = `
+    <div class="card-title">📋 Feuille d’inventaire — ${zoneSelect.value || 'Zone'} ${moisInput.value || ''}</div>
+    <table class="list" id="invTable">
+      <thead><tr><th>Produit</th><th>Quantité</th><th>Unité</th><th>Commentaire</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="row-actions center">
+      <button class="btn ghost" id="btnAddRow">➕ Ajouter une ligne</button>
+      <button class="btn" id="btnGenSheet">📄 Générer la feuille</button>
+      <button class="btn success" id="btnSaveInv">💾 Valider l’inventaire</button>
+    </div>`;
+  section.appendChild(card);
 
-    <div class="card invm-body">
-      <div class="card-subtitle">📋 Feuille d’inventaire</div>
-      <table class="list" id="invTable">
-        <thead>
-          <tr><th>Produit</th><th>Quantité</th><th>Unité</th><th>Commentaire</th><th></th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <div class="row-actions center">
-        <button class="btn ghost" id="btnAddRow">➕ Ajouter une ligne</button>
-      </div>
-    </div>
+  const tbody = card.querySelector('tbody');
 
-    <div class="card invm-footer">
-      <div class="row-actions center">
-        <button class="btn success large" id="btnSaveInv">💾 Valider l’inventaire</button>
-      </div>
-    </div>
-  `;
-
-  // === Gestion du tableau ===
-  const tbody = qs('#invTable tbody');
-
-  function addRow(p = '', q = '', u = '', c = '') {
+  function addRow(p='',q='',u='',c='') {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><input list="dlProduitsInvM" value="${p}" placeholder="Produit"></td>
       <td><input type="number" step="0.01" value="${q}" placeholder="0.00"></td>
       <td><input value="${u}" placeholder="kg / L / pcs"></td>
       <td><input value="${c}" placeholder="Commentaire"></td>
-      <td><button class="btn danger small">✖</button></td>
-    `;
-    tr.querySelector('button').addEventListener('click', () => tr.remove());
+      <td><button class="btn danger small" type="button">✖</button></td>`;
+    tr.querySelector('button').addEventListener('click', ()=> tr.remove());
     tbody.appendChild(tr);
   }
-
-  // Ligne par défaut
   addRow();
 
-  // Boutons
-  qs('#btnAddRow').addEventListener('click', () => addRow());
-
-  qs('#btnInvmGenerate').addEventListener('click', async () => {
-    const res = await api('createInventaireMensuel', {
-      zone: qs('#invmZone').value,
-      mois: qs('#invmMois').value
-    });
-    alert(res.status === 'success' ? '✅ Feuille créée' : '❌ ' + res.message);
+  // 4) Boutons
+  card.querySelector('#btnAddRow').addEventListener('click', ()=> addRow());
+  card.querySelector('#btnGenSheet').addEventListener('click', async ()=>{
+    const res = await api('createInventaireMensuel', { zone: zoneSelect.value, mois: moisInput.value });
+    alert(res.status==='success' ? '✅ Feuille créée' : ('❌ '+res.message));
   });
-
- // ============================================================
-// 🧾 INVENTAIRE MENSUEL — liaison Sheets <-> App
-// ============================================================
-
-function createInventaireMensuel(e) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const zone = e?.parameter?.zone || 'Général';
-  const mois = e?.parameter?.mois || Utilities.formatDate(new Date(), "Europe/Paris", "yyyy-MM");
-  const sheetName = `Inventaire_${zone}_${mois}`;
-
-  // Vérifie si la feuille existe déjà
-  let sheet = ss.getSheetByName(sheetName);
-  if (!sheet) {
-    const model = ss.getSheetByName('Template_Inventaire');
-    sheet = model ? model.copyTo(ss).setName(sheetName) : ss.insertSheet(sheetName);
-    sheet.getRange("A1:D1").setValues([["Produit","Quantité","Unité","Commentaire"]]);
-  }
-
-  return ContentService.createTextOutput(JSON.stringify({status:"success", message:`Feuille ${sheetName} prête`}))
-                       .setMimeType(ContentService.MimeType.JSON);
-}
-
-
-function saveInventaireMensuelBatch(e) {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const zone = e?.parameter?.zone || 'Général';
-    const mois = e?.parameter?.mois || Utilities.formatDate(new Date(), "Europe/Paris", "yyyy-MM");
-    const lignes = JSON.parse(e?.parameter?.lignes || "[]");
-    const sheetName = `Inventaire_${zone}_${mois}`;
-
-    const sheet = ss.getSheetByName(sheetName);
-    if (!sheet) {
-      return ContentService.createTextOutput(JSON.stringify({status:"error", message:`Feuille ${sheetName} introuvable`}))
-                           .setMimeType(ContentService.MimeType.JSON);
-    }
-
-    // Vide les anciennes lignes sauf l’entête
-    const lastRow = sheet.getLastRow();
-    if (lastRow > 1) sheet.getRange(2, 1, lastRow-1, 4).clearContent();
-
-    // Écrit les nouvelles lignes
-    if (lignes.length > 0) {
-      const values = lignes.map(r => [r.produit, r.qte, r.unite, r.comment]);
-      sheet.getRange(2, 1, values.length, 4).setValues(values);
-    }
-
-    return ContentService.createTextOutput(JSON.stringify({status:"success", message:"Inventaire enregistré"}))
-                         .setMimeType(ContentService.MimeType.JSON);
-  } catch(err) {
-    return ContentService.createTextOutput(JSON.stringify({status:"error", message:err.message}))
-                         .setMimeType(ContentService.MimeType.JSON);
-  }
+  card.querySelector('#btnSaveInv').addEventListener('click', async ()=>{
+    const lignes = [];
+    qsa('tbody tr', card).forEach(tr=>{
+      const [p,q,u,c] = qsa('input', tr).map(i=>i.value);
+      if(p && q) lignes.push({produit:p, qte:q, unite:u, comment:c});
+    });
+    if(!lignes.length) return alert('Aucune ligne saisie.');
+    const res = await api('saveInventaireMensuelBatch', { zone: zoneSelect.value, mois: moisInput.value, lignes: JSON.stringify(lignes) });
+    alert(res.status==='success' ? '✅ Inventaire enregistré' : ('❌ '+res.message));
+    if (res.status==='success'){ tbody.innerHTML=''; addRow(); } // reset clair après validation
+  });
 }
 
 // ============================================================
@@ -346,7 +258,6 @@ async function mountRecettes(){
           </div>
           <div class="recette-detail" style="display:none;"></div>
         </div>`).join('');
-
       qsa('.recette-card', list).forEach(card=>{
         card.addEventListener('click', async ()=>{
           const detail = card.querySelector('.recette-detail');
@@ -367,7 +278,6 @@ async function mountRecettes(){
             </div>`;
         });
       });
-
       qs('#recetteSearch').addEventListener('input', e=>{
         const q = e.target.value.toLowerCase();
         qsa('.recette-card', list).forEach(c=>{
@@ -375,7 +285,9 @@ async function mountRecettes(){
           c.style.display = name.includes(q) ? '' : 'none';
         });
       });
-    } else list.innerHTML = '<div class="muted">Aucune recette.</div>';
+    } else {
+      list.innerHTML = '<div class="muted">Aucune recette.</div>';
+    }
   }catch(e){
     qs('#recettesList').innerHTML = '<div class="muted">Erreur de chargement.</div>';
   }
