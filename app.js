@@ -1,5 +1,5 @@
 // ===== CONFIG =====
-const API_URL = "https://script.google.com/macros/s/AKfycbxkiIH47kbhvO8-1lDzAGDIOP4WdVbxy2s4Plge4I5VytphDiCkyj_24alf5urH7JcN/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzBSti4P3gJ4I2dBm5g1Vx-O9R-ygIfJK3cGh_sl1tFLTN4r11qMTdWWGlLhBSzoygw/exec";
 
 // ===== HELPERS =====
 const qs = (s, r=document)=>r.querySelector(s);
