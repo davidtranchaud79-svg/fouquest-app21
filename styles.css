@@ -1,197 +1,290 @@
-/* ===============================
-   Fouques’t Joy • Gold Motion v15
-   Style Premium – Ivoire & Or
-   =============================== */
+/* ============================================================
+   🍷 Fouquet’s Joy – Gold Motion v15.8
+   Thème : Ivoire & Or — Luxe discret et ergonomie tactile
+   ============================================================ */
 
-:root{
-  --bordeaux:#5A0D0D;
-  --or:#C9A227;
-  --ivoire:#FFF8E7;
-  --ivoire-soft:#FCF3DC;
-  --encre:#1F1F1F;
-  --gris:#8A8A8A;
-  --gris-2:#D9D9D9;
-  --bg:#f6f2ea;
-  --card:#ffffffcc;         /* glass */
-  --card-border:#ffffff40;  /* glass */
-  --shadow: 0 10px 30px rgba(0,0,0,.08);
-  --radius: 16px;
-  --radius-sm: 12px;
-  --radius-lg: 22px;
-  --transition: .25s cubic-bezier(.2,.6,.2,1);
+/* === RESET & BASE === */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
-*{box-sizing:border-box}
-html,body{height:100%}
-html{scroll-behavior:smooth}
-body{
-  margin:0;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans";
-  color:var(--encre);
-  background:
-    radial-gradient(1200px 800px at 10% -10%, #fff 0%, transparent 60%),
-    radial-gradient(900px 600px at 100% 0%, #fef7e5 0%, transparent 55%),
-    linear-gradient(180deg, #fff, var(--bg) 60%, #efe7d2 120%);
+body {
+  margin: 0;
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
+  background: #fffaf2;
+  color: #3b2f1b;
+  line-height: 1.5;
+  font-size: 15px;
 }
 
-/* -------- Topbar -------- */
-.topbar{
-  position:sticky; top:0; z-index:20;
-  display:flex; align-items:center; justify-content:space-between;
-  padding:16px 22px;
-  backdrop-filter: blur(8px);
-  background: linear-gradient(180deg, #ffffffcc, #fff8e7cc);
-  border-bottom:1px solid #ffffff80;
+h3 {
+  margin: 0.5em 0;
+  color: #5a0d0d;
 }
 
-.brand{display:flex; align-items:center; gap:12px}
-.brand-badge{
-  width:44px; height:44px; border-radius:50%;
-  display:grid; place-items:center;
-  background: radial-gradient(120% 120% at 30% 20%, #7a2020, var(--bordeaux));
-  color:#fff; font-weight:800; letter-spacing:1px; font-size:18px;
-  box-shadow: 0 6px 16px rgba(90,13,13,.25), inset 0 0 0 2px #ffffff20;
-}
-.brand-text{line-height:1.1}
-.brand-title{font-weight:800; letter-spacing:.3px}
-.brand-sub{font-size:12px; color:#7a2020}
-
-.actions{display:flex; align-items:center; gap:10px}
-
-/* -------- Badges / Buttons -------- */
-.status-badge{
-  padding:6px 10px; border-radius:999px; font-size:12px; font-weight:700;
-  border:1px solid var(--gris-2); background:#fff; color:#666;
-}
-.status-badge.online{color:#0c7a3e; border-color:#bfe3cf; background:#effaf3}
-.status-badge.offline{color:#b55c00; border-color:#f6d3a1; background:#fff7ea}
-.status-badge.error{color:#9a1b1b; border-color:#efb4b4; background:#fff1f1}
-
-.btn{
-  --bg:#fff; --fg:var(--bordeaux); --bd:#e9d7a8;
-  appearance:none; border:1px solid var(--bd); background:var(--bg); color:var(--fg);
-  padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer;
-  transition:transform var(--transition), box-shadow var(--transition), background var(--transition);
-  box-shadow: 0 6px 14px rgba(0,0,0,.04);
-}
-.btn:hover{transform:translateY(-1px); box-shadow:0 10px 22px rgba(0,0,0,.08)}
-.btn:active{transform:translateY(0)}
-.btn.ghost{background:transparent}
-.btn.success{--bg:#0d8a4a; --fg:#fff; --bd:#0d8a4a; box-shadow:0 8px 18px rgba(13,138,74,.2)}
-.btn.success:hover{filter:brightness(1.05)}
-.btn.danger{--bg:#b02a2a; --fg:#fff; --bd:#b02a2a; box-shadow:0 8px 18px rgba(176,42,42,.2)}
-.btn.danger:hover{filter:brightness(1.05)}
-
-/* -------- Tabs -------- */
-.tabs{
-  display:flex; gap:8px; padding:10px 18px; flex-wrap:wrap;
-  border-bottom:1px solid #f0ead8;
-  background:linear-gradient(180deg,#fff,#fffaf0);
-}
-.tab{
-  border:none; background:#fff; color:#4a3a3a; cursor:pointer;
-  padding:10px 14px; border-radius:10px; font-weight:700;
-  box-shadow: inset 0 0 0 1px #e8dcc2;
-  transition:background var(--transition), color var(--transition), box-shadow var(--transition), transform var(--transition);
-}
-.tab:hover{background:#fffef8; transform:translateY(-1px)}
-.tab.active{
-  color:#fff;
-  background: linear-gradient(135deg, var(--or), #e2bb3a);
-  box-shadow: 0 10px 22px rgba(201,162,39,.25);
+.muted {
+  color: #7a6a4f;
+  font-size: 0.9em;
 }
 
-/* -------- Layout -------- */
-.container{max-width:1120px; margin:24px auto; padding:0 16px}
-.section{display:grid; gap:18px}
-
-.card{
-  background: var(--card);
-  border:1px solid var(--card-border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding:18px;
-  backdrop-filter: blur(10px);
+a {
+  color: #c9a227;
+  text-decoration: none;
 }
 
-.card-title{
-  font-weight:800; color:var(--bordeaux); margin-bottom:10px;
-  display:flex; align-items:center; gap:8px;
+/* === LAYOUT === */
+.topbar {
+  background: linear-gradient(90deg, #5a0d0d, #7b1313);
+  color: #fff8e7;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8em 1em;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  position: sticky;
+  top: 0;
+  z-index: 99;
 }
 
-/* KPIs */
-.kpi{position:relative; overflow:hidden}
-.kpi::after{
-  content:""; position:absolute; inset:-1px; pointer-events:none;
-  background: radial-gradient(400px 200px at -10% -20%, #fff5cc80 0%, transparent 60%);
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
 }
-.kpi-title{font-size:12px; text-transform:uppercase; color:#7a2020; letter-spacing:.5px}
-.kpi-value{font-size:32px; font-weight:900; color:#2a211f; margin-top:4px}
-.kpi-sub{font-size:12px; color:#937; opacity:.7}
 
-/* Grids */
-.grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px}
-.grid{display:grid; grid-template-columns:repeat(2,1fr); gap:14px}
-.grid-cards{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:14px}
+.brand-badge {
+  background: #c9a227;
+  color: #fff;
+  font-weight: bold;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 6px rgba(0,0,0,0.25);
+}
 
-/* Inputs */
-.input-field{display:flex; flex-direction:column; gap:6px}
-.input-field label{
-  font-size:12px; font-weight:800; letter-spacing:.2px; color:#6b4a4a;
+.brand-title {
+  font-weight: 600;
+  font-size: 1.1em;
+}
+
+.brand-sub {
+  font-size: 0.8em;
+  color: #ffecc3;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+}
+
+.status-badge {
+  padding: 0.3em 0.8em;
+  border-radius: 999px;
+  font-size: 0.8em;
+  font-weight: 600;
+  transition: 0.3s;
+}
+.status-badge.online {
+  background: #c9a227;
+  color: #fff;
+}
+.status-badge.offline {
+  background: #bcbcbc;
+  color: #fff;
+}
+
+/* === NAVIGATION === */
+.tabs {
+  display: flex;
+  background: #fff8e7;
+  border-bottom: 2px solid #e2d1a1;
+  overflow-x: auto;
+}
+.tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 0.9em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s;
+  color: #5a0d0d;
+}
+.tab:hover {
+  background: #f8f1da;
+}
+.tab.active {
+  background: #c9a227;
+  color: #fff;
+}
+
+/* === SECTIONS === */
+.container {
+  padding: 1em;
+  max-width: 1100px;
+  margin: auto;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2em;
+}
+
+/* === CARDS === */
+.card {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  padding: 1em 1.2em;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+  backdrop-filter: blur(6px);
+}
+.card-title {
+  font-weight: 600;
+  color: #5a0d0d;
+  margin-bottom: 0.6em;
+}
+
+/* === KPI === */
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1em;
+}
+.kpi {
+  text-align: center;
+  background: linear-gradient(180deg, #fffdf6, #fff2c6);
+  border: 1px solid #e2d1a1;
+}
+.kpi-title {
+  font-weight: 600;
+  color: #7a6a4f;
+}
+.kpi-value {
+  font-size: 1.8em;
+  color: #5a0d0d;
+  font-weight: 700;
+}
+.kpi-sub {
+  font-size: 0.9em;
+  color: #b9a67d;
+}
+
+/* === TABLE === */
+table.list {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+table.list th, table.list td {
+  padding: 0.6em;
+  border-bottom: 1px solid #e5d9a8;
+}
+table.list thead {
+  background: #fff3d1;
+  color: #5a0d0d;
+  text-align: left;
+}
+table.list tbody tr:hover {
+  background: #fff8e0;
+}
+
+/* === INPUTS === */
+.input-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.8em;
+}
+.input-field label {
+  font-weight: 600;
+  color: #5a0d0d;
+  margin-bottom: 0.2em;
 }
 .input-field input,
-.input-field select{
-  border:1px solid #eadfcb; border-radius:10px; padding:10px 12px; background:#fff;
-  outline:none; transition:border var(--transition), box-shadow var(--transition);
+.input-field select {
+  border: 1px solid #e2d1a1;
+  border-radius: 8px;
+  padding: 0.6em 0.8em;
+  font-size: 1em;
+  background: #fffdf6;
+  transition: 0.2s;
 }
 .input-field input:focus,
-.input-field select:focus{
-  border-color:#e5c66a; box-shadow:0 0 0 4px #e5c66a33;
+.input-field select:focus {
+  outline: none;
+  border-color: #c9a227;
+  box-shadow: 0 0 0 2px rgba(201,162,39,0.2);
 }
 
-.row-actions{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:12px}
-
-/* Tables */
-.list{width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; border-radius:14px; box-shadow: var(--shadow)}
-.list thead th{
-  text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.3px;
-  background: linear-gradient(180deg,#fff8e7,#f3e6be);
-  color:#6d4c12; padding:10px 12px; border-bottom:1px solid #eadfcb;
+/* === GRID UTILITY === */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1em;
 }
-.list tbody td{padding:10px 12px; border-bottom:1px solid #f0e7d6}
-.list tbody tr:hover{background:#fffdf6}
-
-/* Recettes */
-.recette-card{
-  display:flex; justify-content:space-between; align-items:center; gap:10px;
-  padding:14px; border-radius:12px; background:#ffffff; border:1px solid #f0ead8;
-  transition: transform var(--transition), box-shadow var(--transition), border var(--transition);
-}
-.recette-card:hover{transform:translateY(-2px); box-shadow: var(--shadow); border-color:#eadfbf}
-.recette-detail h3{margin:0 0 6px 0; color:var(--bordeaux)}
-.muted{color:#7a6b6b; font-size:12px}
-
-/* Footer */
-.footer{
-  margin:30px auto 40px; text-align:center; color:#7c6e6e; font-size:12px;
+.row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.8em;
+  margin-top: 0.8em;
 }
 
-/* Responsive */
-@media (max-width:980px){
-  .grid-3{grid-template-columns:1fr}
-  .grid{grid-template-columns:1fr}
-  .topbar{padding:14px 16px}
-  .brand-badge{width:40px; height:40px; font-size:16px}
+/* === BUTTONS === */
+.btn {
+  background: #c9a227;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6em 1.2em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.25s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.25);
+}
+.btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-/* Fancy focus ring for buttons */
-.btn:focus{outline:none; box-shadow:0 0 0 4px #e5c66a33}
+.btn.success {
+  background: #2e8b57;
+}
+.btn.danger {
+  background: #b32222;
+}
+.btn.ghost {
+  background: transparent;
+  border: 1px solid #c9a227;
+  color: #c9a227;
+  box-shadow: none;
+}
+.btn.ghost:hover {
+  background: #fff3d1;
+}
 
-/* Subtle separators */
-.card + .card{border-top-left-radius: var(--radius-lg)}
+/* === FOOTER === */
+.footer {
+  text-align: center;
+  color: #7a6a4f;
+  font-size: 0.85em;
+  padding: 1.2em;
+  margin-top: 2em;
+  border-top: 1px solid #e5d9a8;
+}
 
-/* Service badge color fallback class */
-.badge{background:#fff; border:1px solid #eadfcb; padding:6px 10px; border-radius:999px; font-size:12px}
-
-/* Small helpers */
-.hidden{display:none !important}
+/* === RESPONSIVE === */
+@media (max-width: 600px) {
+  .brand-title { font-size: 1em; }
+  .brand-sub { display: none; }
+  .card { padding: 0.8em; }
+  table.list th, table.list td { padding: 0.4em; }
+}
