@@ -1,20 +1,34 @@
+// ============================================================
+// 🍷 Fouquet’s Joy — Gold Motion v15.8
+// Frontend aligné avec code.gs v15.7
+// ============================================================
+
 // ===== CONFIG =====
 const API_URL = "https://script.google.com/macros/s/AKfycbxWW8OIsd8Gwwk0aP7AYOsB57FpymhIjhY5-ElVCta79WdE-oKJslajMN3MegFE0xLx/exec";
 
 // ===== HELPERS =====
 const qs = (s, r=document)=>r.querySelector(s);
 const qsa = (s, r=document)=>[...r.querySelectorAll(s)];
+
 function serialize(params){
   const u = new URLSearchParams();
   Object.entries(params).forEach(([k,v])=> u.append(k, v==null?'':String(v)));
   return u.toString();
 }
+
 async function api(action, params={}){
   const url = `${API_URL}?${serialize({action, ...params})}`;
-  const r = await fetch(url, { method:'GET', cache:'no-store' });
-  if(!r.ok) throw new Error('HTTP '+r.status);
-  return r.json();
+  try {
+    const r = await fetch(url, { method:'GET', cache:'no-store' });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const data = await r.json();
+    return data;
+  } catch(e) {
+    console.error("Erreur API", e);
+    return { status:"error", message:e.message };
+  }
 }
+
 function setBadge(state){
   const b = qs('#syncBadge');
   if(!b) return;
@@ -36,13 +50,12 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
 async function checkConnection(){
   try{
-    // ping simple: on tente un getEtatStock
-    const res = await api('getEtatStock');
+    const res = await api('ping');
     setBadge(res.status==='success' ? 'online' : 'error');
   }catch(_){ setBadge('error'); }
 }
 
-// ===== RENDER SWITCH =====
+// ===== RENDER =====
 async function render(view){
   const tpl = qs(`#tpl-${view}`);
   qs('#app').innerHTML = tpl ? tpl.innerHTML : '<section class="section"><div class="card">Vue indisponible</div></section>';
@@ -54,10 +67,12 @@ async function render(view){
   if(view==='settings') mountSettings();
 }
 
-// ===== DASHBOARD =====
+// ============================================================
+// 📊 DASHBOARD
+// ============================================================
 async function mountDashboard(){
   try{
-    const etat = await api('getEtatStock'); // {status, quantiteTotale, valeurTotale}
+    const etat = await api('getEtatStock');
     if(etat.status==='success'){
       qs('#kpiStock').textContent = `€ ${(etat.valeurTotale||0).toLocaleString('fr-FR')}`;
       qs('#kpiStockQte').textContent = `${(etat.quantiteTotale||0).toLocaleString('fr-FR')} unités`;
@@ -65,11 +80,13 @@ async function mountDashboard(){
   }catch(e){ console.warn('Etat stock', e); }
 
   try{
-    const detail = await api('getStockDetail'); // {status, stock:[{...}]}
-    const tbody = qs('#tableStockDetail tbody'); if(!tbody) return;
+    const detail = await api('getStockDetail');
+    const tbody = qs('#tableStockDetail tbody');
+    if(!tbody) return;
     tbody.innerHTML = '';
-    if(detail.status==='success'){
-      detail.stock.forEach(it=>{
+    if(detail.status==='success' || Array.isArray(detail)){
+      const stockList = detail.stock || detail; // compatible avec ton code.gs
+      stockList.forEach(it=>{
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${it.produit||''}</td>
           <td style="text-align:right">${Number(it.quantite||0)}</td>
@@ -84,26 +101,32 @@ async function mountDashboard(){
     }
   }catch(e){ console.warn('Stock detail', e); }
 
-  // petit graph placebo (pour l’instant)
   const ctx = qs('#chartPertes');
   if(ctx && window.Chart){
-    new Chart(ctx, { type:'line',
-      data:{ labels:['J-6','J-5','J-4','J-3','J-2','J-1','J'],
-        datasets:[{ label:'Pertes €', data:[50,80,60,120,90,140,110]}] },
+    new Chart(ctx, {
+      type:'bar',
+      data:{
+        labels:['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'],
+        datasets:[{ label:'Pertes €', data:[50,80,60,120,90,140,110], backgroundColor:'#C9A227' }]
+      },
       options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
     });
   }
 }
 
-// ===== PERTES =====
+// ============================================================
+// 🗑️ PERTES
+// ============================================================
 async function preloadProduits(datalistId){
   try{
     const d = await api('getStockDetail');
     const dl = qs(`#${datalistId}`);
     if(!dl) return;
-    dl.innerHTML = (d.status==='success' ? d.stock : []).map(p=>`<option value="${p.produit}">`).join('');
+    const stockList = d.stock || d;
+    dl.innerHTML = (Array.isArray(stockList) ? stockList.map(p=>`<option value="${p.produit}">`).join('') : '');
   }catch(_){}
 }
+
 function mountPertes(){
   preloadProduits('dlProduitsPertes');
   qs('#btnSavePerte').addEventListener('click', async ()=>{
@@ -114,26 +137,23 @@ function mountPertes(){
       motif: qs('#pertesMotif').value,
       comment: qs('#pertesComment').value
     };
-    try{
-      const res = await api('pertesAdd', payload);
-      alert(res.status==='success' ? '✅ Perte enregistrée' : ('❌ '+(res.message||'Erreur')));
-      // reset
-      ['pertesProduit','pertesQte','pertesUnite','pertesMotif','pertesComment'].forEach(id=> qs('#'+id).value='');
-    }catch(e){ alert('❌ Erreur réseau'); }
+    const res = await api('pertesAdd', payload);
+    alert(res.status==='success' ? '✅ Perte enregistrée' : ('❌ '+(res.message||'Erreur')));
+    ['pertesProduit','pertesQte','pertesUnite','pertesMotif','pertesComment'].forEach(id=>qs('#'+id).value='');
   });
-  qs('#btnResetPerte').addEventListener('click', ()=>{
-    ['pertesProduit','pertesQte','pertesUnite','pertesMotif','pertesComment'].forEach(id=> qs('#'+id).value='');
-  });
+  qs('#btnResetPerte').addEventListener('click', ()=>['pertesProduit','pertesQte','pertesUnite','pertesMotif','pertesComment'].forEach(id=>qs('#'+id).value=''));
 }
 
-// ===== INVENTAIRE JOURNALIER =====
+// ============================================================
+// 📦 INVENTAIRE JOURNALIER
+// ============================================================
 async function mountInvJ(){
-  // produits dynamiques
   preloadProduits('dlProduitsInvJ');
   qs('#btnInvJEntree').addEventListener('click', ()=> handleInvJ('entree'));
   qs('#btnInvJSortie').addEventListener('click', ()=> handleInvJ('sortie'));
   qs('#btnResetInvJ').addEventListener('click', ()=> ['invjProduit','invjQte','invjUnite'].forEach(id=>qs('#'+id).value=''));
 }
+
 async function handleInvJ(type){
   const payload = {
     produit: qs('#invjProduit').value,
@@ -141,59 +161,52 @@ async function handleInvJ(type){
     unite: qs('#invjUnite').value,
     type
   };
-  try{
-    const res = await api('inventaireJournalier', payload);
-    alert(res.status==='success' ? '✅ Mouvement enregistré' : ('❌ '+(res.message||'Erreur')));
-    ['invjProduit','invjQte','invjUnite'].forEach(id=>qs('#'+id).value='');
-  }catch(e){ alert('❌ Erreur réseau'); }
+  const res = await api('inventaireJournalier', payload);
+  alert(res.status==='success' ? '✅ Mouvement ajouté' : ('❌ '+(res.message||'Erreur')));
+  ['invjProduit','invjQte','invjUnite'].forEach(id=>qs('#'+id).value='');
 }
 
-// ===== INVENTAIRE MENSUEL =====
+// ============================================================
+// 🏷️ INVENTAIRE MENSUEL
+// ============================================================
 async function mountInvM(){
-  // zones dynamiques
   try{
-    const z = await api('zonesList'); // {status, zones:[...]}
+    const z = await api('zonesList');
     const sel = qs('#invmZone');
-    sel.innerHTML = (z.status==='success' ? z.zones : []).map(v=>`<option>${v}</option>`).join('');
+    sel.innerHTML = (z.status==='success' ? z.zones.map(v=>`<option>${v}</option>`).join('') : '');
   }catch(_){}
 
-  // produits dynamiques
   preloadProduits('dlProduitsInvM');
 
   qs('#btnInvmGenerate').addEventListener('click', async ()=>{
     const payload = { zone: qs('#invmZone').value, mois: qs('#invmMois').value };
-    try{
-      const res = await api('createInventaireMensuel', payload);
-      alert(res.status==='success' ? '✅ Feuille créée' : ('❌ '+(res.message||'Erreur')));
-    }catch(e){ alert('❌ Erreur réseau'); }
+    const res = await api('createInventaireMensuel', payload);
+    alert(res.status==='success' ? '✅ Feuille créée' : ('❌ '+(res.message||'Erreur')));
   });
 
   qs('#btnInvmSave').addEventListener('click', async ()=>{
     const payload = {
       zone: qs('#invmZone').value,
       mois: qs('#invmMois').value,
-      produits: qs('#invmProduit').value,
-      quantite: qs('#invmQte').value,
+      produit: qs('#invmProduit').value,
+      qte: qs('#invmQte').value,
       unite: qs('#invmUnite').value,
-      commentaires: qs('#invmComment').value
+      comment: qs('#invmComment').value
     };
-    try{
-      const res = await api('saveInventaireMensuel', payload);
-      alert(res.status==='success' ? '✅ Ligne enregistrée' : ('❌ '+(res.message||'Erreur')));
-      // reset léger
-      ['invmProduit','invmQte','invmUnite','invmComment'].forEach(id=>qs('#'+id).value='');
-    }catch(e){ alert('❌ Erreur réseau'); }
+    const res = await api('saveInventaireMensuel', payload);
+    alert(res.status==='success' ? '✅ Ligne enregistrée' : ('❌ '+(res.message||'Erreur')));
+    ['invmProduit','invmQte','invmUnite','invmComment'].forEach(id=>qs('#'+id).value='');
   });
 
-  qs('#btnInvmReset').addEventListener('click', ()=>{
-    ['invmMois','invmProduit','invmQte','invmUnite','invmComment'].forEach(id=>qs('#'+id).value='');
-  });
+  qs('#btnInvmReset').addEventListener('click', ()=>['invmMois','invmProduit','invmQte','invmUnite','invmComment'].forEach(id=>qs('#'+id).value=''));
 }
 
-// ===== RECETTES =====
+// ============================================================
+// 🍽️ RECETTES
+// ============================================================
 async function mountRecettes(){
   try{
-    const res = await api('getRecettes'); // {status, recettes:[{code,nom,categorie,portions,commentaire}]}
+    const res = await api('getRecettes');
     const list = qs('#recettesList');
     if(res.status==='success'){
       list.innerHTML = res.recettes.map(r=>`
@@ -211,49 +224,37 @@ async function mountRecettes(){
           c.style.display = name.includes(q) ? '' : 'none';
         });
       });
-    }else{
-      list.innerHTML = '<div class="muted">Aucune recette.</div>';
-    }
+    }else list.innerHTML = '<div class="muted">Aucune recette.</div>';
   }catch(_){}
 }
+
 async function loadRecette(code){
   const d = qs('#recetteDetail'); d.innerHTML = '';
-  try{
-    const r = await api('getRecette', {code});
-    if(r.status!=='success'){ d.textContent='Recette introuvable.'; return; }
-    const rec = r.recette;
-    d.innerHTML = `
-      <div class="card">
-        <h3>${rec.nom}</h3>
-        <div class="muted">Base ${rec.portions||1} portions</div>
-        <div class="input-field" style="max-width:180px;margin:10px 0;">
-          <label>Multiplier</label>
-          <input id="multiInput" type="number" value="1" min="0.1" step="0.5">
-        </div>
-        <table class="list">
-          <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Zone</th></tr></thead>
-          <tbody>${(rec.ingredients||[]).map(i=>`
-            <tr><td>${i.produit}</td><td data-base="${i.quantite}">${Number(i.quantite).toFixed(2)}</td><td>${i.unite}</td><td>${i.zone||''}</td></tr>`).join('')}
-          </tbody>
-        </table>
-      </div>`;
-    qs('#multiInput').addEventListener('input', e=>{
-      const m = Number(e.target.value)||1;
-      qsa('td[data-base]', d).forEach(td=>{
-        const base = Number(td.getAttribute('data-base'));
-        td.textContent = (base*m).toFixed(2);
-      });
-    });
-  }catch(_){ d.textContent='Erreur de chargement.'; }
+  const r = await api('getRecette', {code});
+  if(r.status!=='success'){ d.textContent='Recette introuvable.'; return; }
+  const rec = r.recette;
+  d.innerHTML = `
+    <div class="card">
+      <h3>${rec.nom}</h3>
+      <div class="muted">Base ${rec.portions||1} portions</div>
+      <table class="list">
+        <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Zone</th></tr></thead>
+        <tbody>${(rec.ingredients||[]).map(i=>`
+          <tr><td>${i.produit}</td><td>${i.quantite}</td><td>${i.unite}</td><td>${i.zone||''}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
 }
 
-// ===== SETTINGS =====
+// ============================================================
+// ⚙️ PARAMÈTRES
+// ============================================================
 function mountSettings(){
   qs('#btnSetSave').addEventListener('click', ()=>{
     localStorage.setItem('etab', qs('#setEtab').value);
     localStorage.setItem('tz', qs('#setTz').value);
     localStorage.setItem('emailCC', qs('#setEmail').value);
     localStorage.setItem('lang', qs('#setLang').value);
-    alert('Paramètres enregistrés.');
+    alert('Paramètres enregistrés ✅');
   });
 }
