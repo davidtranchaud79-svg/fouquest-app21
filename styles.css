@@ -294,3 +294,81 @@ table.list tbody tr:hover { background: rgba(255,255,255,0.08); }
   .card { padding: 0.8em; }
   table.list th, table.list td { padding: 0.4em; }
 }
+/* === INVENTAIRE MENSUEL STRUCTURÉ === */
+.invm-header, .invm-body, .invm-footer {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(201,162,39,0.25);
+  border-radius: 14px;
+  padding: 1em 1.2em;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.invm-header-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 1em;
+  align-items: end;
+}
+
+.invm-header-grid .center {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.card-subtitle {
+  font-weight: 600;
+  color: #ffefc1;
+  margin-bottom: 0.6em;
+}
+
+#invTable {
+  background: rgba(0,0,0,0.25);
+  border-radius: 10px;
+  border: 1px solid rgba(201,162,39,0.3);
+  width: 100%;
+}
+
+#invTable th {
+  background: rgba(201,162,39,0.15);
+  color: #ffefc1;
+}
+#invTable td {
+  color: #fff8e7;
+  border-bottom: 1px solid rgba(201,162,39,0.2);
+}
+
+#invTable input {
+  width: 100%;
+  padding: 6px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(201,162,39,0.3);
+  border-radius: 8px;
+  color: #fff8e7;
+}
+
+#invTable input:focus {
+  border-color: #c9a227;
+  box-shadow: 0 0 0 2px rgba(201,162,39,0.25);
+  background: rgba(201,162,39,0.1);
+}
+
+.row-actions.center {
+  justify-content: center;
+}
+
+.btn.gold {
+  background: linear-gradient(90deg, #c9a227, #e2c45d);
+  color: #4a0909;
+  font-weight: 700;
+  border-radius: 8px 20px 8px 20px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+}
+.btn.gold:hover {
+  background: linear-gradient(90deg, #e2c45d, #c9a227);
+}
+
+.btn.large {
+  font-size: 1.1em;
+  padding: 0.8em 1.8em;
+}
