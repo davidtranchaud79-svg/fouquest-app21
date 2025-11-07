@@ -39,7 +39,7 @@
   </nav>
 
   <main id="app" class="container"></main>
-  <footer class="footer">© Fouquet’s Joy – v15.5</footer>
+  <footer class="footer">© Fouquet’s Joy – v16.1</footer>
 
   <!-- === DASHBOARD === -->
   <template id="tpl-dashboard">
@@ -53,7 +53,7 @@
         <div class="card kpi">
           <div class="kpi-title">Pertes (mois)</div>
           <div class="kpi-value" id="kpiPertes">—</div>
-          <div class="kpi-sub">estimation</div>
+          <div class="kpi-sub" id="kpiPertesLabel">Poids total des pertes (kg)</div>
         </div>
         <div class="card kpi">
           <div class="kpi-title">Alertes seuil</div>
@@ -65,7 +65,16 @@
       <div class="card">
         <div class="card-title">📋 État du stock courant</div>
         <table class="list" id="tableStockDetail">
-          <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Prix (€)</th><th>Valeur (€)</th><th>Zone</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Produit</th>
+              <th>Qté</th>
+              <th>Unité</th>
+              <th>Prix (€)</th>
+              <th>Valeur (€)</th>
+              <th>Zone</th>
+            </tr>
+          </thead>
           <tbody></tbody>
         </table>
       </div>
