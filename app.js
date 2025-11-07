@@ -4,7 +4,7 @@
 // ============================================================
 
 // ===== CONFIG =====
-const API_URL = "https://script.google.com/macros/s/AKfycby93t59G-JIFzz0bTfD1RshbInDmwEJFagFKamrc3KcBokzpvs55FKuNF_ah2vkzffg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzDGz6WfvT9COn7RhSIJ9bj0ATtn78KrNQmHx5n53zb0076QVdqrRc97upj0EkQ20sI/exec";
 
 // ===== HELPERS =====
 const qs = (s, r=document)=>r.querySelector(s);
@@ -275,23 +275,59 @@ async function mountInvM() {
     alert(res.status === 'success' ? '✅ Feuille créée' : '❌ ' + res.message);
   });
 
-  qs('#btnSaveInv').addEventListener('click', async () => {
-    const lignes = [];
-    qsa('tbody tr', tbody).forEach(tr => {
-      const [p, q, u, c] = qsa('input', tr).map(i => i.value);
-      if(p && q) lignes.push({ produit: p, qte: q, unite: u, comment: c });
-    });
-    if(!lignes.length) return alert('Aucune ligne saisie.');
+ // ============================================================
+// 🧾 INVENTAIRE MENSUEL — liaison Sheets <-> App
+// ============================================================
 
-    const payload = {
-      zone: qs('#invmZone').value,
-      mois: qs('#invmMois').value,
-      lignes: JSON.stringify(lignes)
-    };
+function createInventaireMensuel(e) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const zone = e?.parameter?.zone || 'Général';
+  const mois = e?.parameter?.mois || Utilities.formatDate(new Date(), "Europe/Paris", "yyyy-MM");
+  const sheetName = `Inventaire_${zone}_${mois}`;
 
-    const res = await api('saveInventaireMensuelBatch', payload);
-    alert(res.status === 'success' ? '✅ Inventaire enregistré' : '❌ ' + res.message);
-  });
+  // Vérifie si la feuille existe déjà
+  let sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    const model = ss.getSheetByName('Template_Inventaire');
+    sheet = model ? model.copyTo(ss).setName(sheetName) : ss.insertSheet(sheetName);
+    sheet.getRange("A1:D1").setValues([["Produit","Quantité","Unité","Commentaire"]]);
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({status:"success", message:`Feuille ${sheetName} prête`}))
+                       .setMimeType(ContentService.MimeType.JSON);
+}
+
+
+function saveInventaireMensuelBatch(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const zone = e?.parameter?.zone || 'Général';
+    const mois = e?.parameter?.mois || Utilities.formatDate(new Date(), "Europe/Paris", "yyyy-MM");
+    const lignes = JSON.parse(e?.parameter?.lignes || "[]");
+    const sheetName = `Inventaire_${zone}_${mois}`;
+
+    const sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      return ContentService.createTextOutput(JSON.stringify({status:"error", message:`Feuille ${sheetName} introuvable`}))
+                           .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Vide les anciennes lignes sauf l’entête
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1) sheet.getRange(2, 1, lastRow-1, 4).clearContent();
+
+    // Écrit les nouvelles lignes
+    if (lignes.length > 0) {
+      const values = lignes.map(r => [r.produit, r.qte, r.unite, r.comment]);
+      sheet.getRange(2, 1, values.length, 4).setValues(values);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({status:"success", message:"Inventaire enregistré"}))
+                         .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({status:"error", message:err.message}))
+                         .setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 // ============================================================
