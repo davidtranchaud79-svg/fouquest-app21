@@ -166,39 +166,89 @@ async function handleInvJ(type){
   ['invjProduit','invjQte','invjUnite'].forEach(id=>qs('#'+id).value='');
 }
 
-// ============================================================
-// 🏷️ INVENTAIRE MENSUEL
-// ============================================================
-async function mountInvM(){
-  try{
+// ===== INVENTAIRE MENSUEL – Tableau dynamique =====
+async function mountInvM() {
+  const zoneSelect = qs('#invmZone');
+  const moisInput = qs('#invmMois');
+  const tableContainer = document.createElement('div');
+  tableContainer.className = 'card';
+  qs('#app section').appendChild(tableContainer);
+
+  // zones dynamiques
+  try {
     const z = await api('zonesList');
-    const sel = qs('#invmZone');
-    sel.innerHTML = (z.status==='success' ? z.zones.map(v=>`<option>${v}</option>`).join('') : '');
-  }catch(_){}
+    zoneSelect.innerHTML = (z.status==='success' ? z.zones : []).map(v=>`<option>${v}</option>`).join('');
+  } catch(e) { zoneSelect.innerHTML = '<option>Général</option>'; }
 
-  preloadProduits('dlProduitsInvM');
+  // produits dynamiques
+  let produits = [];
+  try {
+    const d = await api('getStockDetail');
+    produits = (d.status==='success' ? d.stock.map(p=>p.produit) : []);
+  } catch(_){}
 
-  qs('#btnInvmGenerate').addEventListener('click', async ()=>{
-    const payload = { zone: qs('#invmZone').value, mois: qs('#invmMois').value };
-    const res = await api('createInventaireMensuel', payload);
-    alert(res.status==='success' ? '✅ Feuille créée' : ('❌ '+(res.message||'Erreur')));
+  // structure du tableau
+  tableContainer.innerHTML = `
+    <div class="card-title">📋 Inventaire – ${zoneSelect.value || 'Zone'} ${moisInput.value || ''}</div>
+    <table class="list" id="invTable">
+      <thead><tr><th>Produit</th><th>Quantité</th><th>Unité</th><th>Commentaire</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="row-actions">
+      <button class="btn ghost" id="btnAddRow">➕ Ajouter une ligne</button>
+      <button class="btn" id="btnSaveInv">💾 Valider l’inventaire</button>
+      <button class="btn" id="btnGenSheet">📄 Générer la feuille</button>
+    </div>
+  `;
+
+  const tbody = tableContainer.querySelector('tbody');
+
+  // Fonction pour ajouter une ligne de saisie
+  function addRow(produit='', qte='', unite='', comment='') {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input list="dlProduitsInvM" value="${produit}" placeholder="Produit"></td>
+      <td><input type="number" step="0.01" value="${qte}" placeholder="0.00"></td>
+      <td><input value="${unite}" placeholder="kg / L / pcs"></td>
+      <td><input value="${comment}" placeholder="Commentaire"></td>
+      <td><button class="btn danger small">✖</button></td>
+    `;
+    tr.querySelector('button').addEventListener('click', ()=> tr.remove());
+    tbody.appendChild(tr);
+  }
+
+  // ajouter au moins une ligne par défaut
+  addRow();
+
+  // gestion des boutons
+  qs('#btnAddRow').addEventListener('click', ()=> addRow());
+
+  qs('#btnGenSheet').addEventListener('click', async ()=>{
+    const payload = { zone: zoneSelect.value, mois: moisInput.value };
+    try {
+      const res = await api('createInventaireMensuel', payload);
+      alert(res.status==='success' ? '✅ Feuille créée' : res.message);
+    } catch(e){ alert('❌ Erreur de génération'); }
   });
 
-  qs('#btnInvmSave').addEventListener('click', async ()=>{
+  qs('#btnSaveInv').addEventListener('click', async ()=>{
+    const lignes = [];
+    qsa('tbody tr', tableContainer).forEach(tr=>{
+      const [p,q,u,c] = qsa('input', tr).map(i=>i.value);
+      if(p && q) lignes.push({produit:p, qte:q, unite:u, comment:c});
+    });
+
+    if(!lignes.length) return alert('Aucune ligne saisie.');
     const payload = {
-      zone: qs('#invmZone').value,
-      mois: qs('#invmMois').value,
-      produit: qs('#invmProduit').value,
-      qte: qs('#invmQte').value,
-      unite: qs('#invmUnite').value,
-      comment: qs('#invmComment').value
+      zone: zoneSelect.value,
+      mois: moisInput.value,
+      lignes: JSON.stringify(lignes)
     };
-    const res = await api('saveInventaireMensuel', payload);
-    alert(res.status==='success' ? '✅ Ligne enregistrée' : ('❌ '+(res.message||'Erreur')));
-    ['invmProduit','invmQte','invmUnite','invmComment'].forEach(id=>qs('#'+id).value='');
+    try {
+      const res = await api('saveInventaireMensuelBatch', payload);
+      alert(res.status==='success' ? '✅ Inventaire enregistré' : res.message);
+    } catch(e){ alert('❌ Erreur réseau'); }
   });
-
-  qs('#btnInvmReset').addEventListener('click', ()=>['invmMois','invmProduit','invmQte','invmUnite','invmComment'].forEach(id=>qs('#'+id).value=''));
 }
 
 // ===== RECETTES =====
