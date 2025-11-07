@@ -1,10 +1,10 @@
 // ============================================================
-// 🍷 Fouquet’s Joy — Gold Motion v16.3
-// Frontend aligné avec code.gs v16.3 (unités auto + inventaire journalier)
+// 🍷 Fouquet’s Joy — Gold Motion v16.4
+// Frontend aligné avec code.gs v16.4 (Pareto pertes + unités auto)
 // ============================================================
 
 // ===== CONFIG =====
-const API_URL = "https://script.google.com/macros/s/AKfycbwjKMoB-BfJ18LM-hEKDjtVch3OMvtbLFvZY3K33yhwZJ_hFNRfbodgSm4FCs5CaPvN/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxqh8yvag7cBGZ34zza181fpWV2TssYeQIIqUEd5ZI91knMY5jSK6sUP0QDEULfh12a/exec";
 
 // ===== HELPERS =====
 const qs = (s, r=document)=>r.querySelector(s);
@@ -61,7 +61,7 @@ async function render(view){
 }
 
 // ============================================================
-// 📊 DASHBOARD
+// 📊 DASHBOARD – Pareto pertes
 // ============================================================
 async function mountDashboard(){
   try{
@@ -98,17 +98,107 @@ async function mountDashboard(){
     });
   }catch(e){ console.warn('Stock detail', e); }
 
+  // === Graphique Pareto des pertes ===
   const ctx = qs('#chartPertes');
-  if(ctx && window.Chart){
-    new Chart(ctx, {
-      type:'bar',
-      data:{
-        labels:['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'],
-        datasets:[{ label:'Pertes (kg)', data:[4,5.5,3,6.2,4.8,7.1,5.6] }]
-      },
-      options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+  const legendContainer = qs('#pertesLegend');
+  try {
+    const pertesParProduit = await api('getPertesParProduit');
+    if (!ctx || !window.Chart || pertesParProduit.status !== 'success') return;
+    const pertes = pertesParProduit.pertes || [];
+    if (!pertes.length) {
+      ctx.replaceWith("Aucune perte ce mois-ci 🎉");
+      return;
+    }
+
+    const total = pertes.reduce((sum, p) => sum + p.qte, 0);
+    const top = pertes.slice(0, 10);
+    const labels = top.map(p => p.produit);
+    const dataVals = top.map(p => p.qte);
+    let cumul = 0;
+    const cumulPct = dataVals.map(v => {
+      cumul += v;
+      return (cumul / total * 100).toFixed(1);
     });
-  }
+
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Pertes (kg)',
+            data: dataVals,
+            backgroundColor: 'rgba(200,60,60,0.8)',
+            borderColor: '#5A0D0D',
+            borderWidth: 1,
+            yAxisID: 'y',
+            borderRadius: 6
+          },
+          {
+            label: 'Cumul (%)',
+            data: cumulPct,
+            type: 'line',
+            borderColor: '#C9A227',
+            borderWidth: 2,
+            yAxisID: 'y1',
+            tension: 0.3,
+            pointBackgroundColor: '#C9A227'
+          }
+        ]
+      },
+      options: {
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#333' } },
+          title: {
+            display: true,
+            text: 'Pareto des pertes (Top 10 produits)',
+            color: '#5A0D0D',
+            font: { weight: 'bold', size: 14 }
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => ctx.dataset.label === 'Cumul (%)'
+                ? `${ctx.formattedValue}% cumul`
+                : `${ctx.formattedValue} kg (${((ctx.parsed.y/total)*100).toFixed(1)}%)`
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: 'Pertes (kg)' },
+            grid: { color: 'rgba(0,0,0,0.05)' },
+            ticks: { color: '#333' }
+          },
+          y1: {
+            beginAtZero: true,
+            position: 'right',
+            min: 0, max: 100,
+            grid: { drawOnChartArea: false },
+            ticks: { callback: v => v + '%', color: '#C9A227' },
+            title: { display: true, text: 'Cumul %', color: '#C9A227' }
+          },
+          x: { ticks: { color: '#333', font: { size: 11 } } }
+        }
+      }
+    });
+
+    if (legendContainer) {
+      legendContainer.innerHTML = `
+        <div class="card muted" style="margin-top:1rem">
+          ${top.map((p, i) => {
+            const pct = ((p.qte / total) * 100).toFixed(1);
+            return `
+              <div style="display:flex;justify-content:space-between;">
+                <span>${i+1}. ${p.produit}</span>
+                <span><b>${p.qte.toFixed(2)} kg</b> <small>(${pct}%)</small></span>
+              </div>`;
+          }).join('')}
+          <hr>
+          <div style="text-align:right;font-weight:bold;">Total : ${total.toFixed(2)} kg</div>
+        </div>`;
+    }
+  } catch(e){ console.warn('Graph Pareto', e); }
 }
 
 // ============================================================
@@ -194,7 +284,6 @@ async function handleInvJ(type){
 // ============================================================
 async function mountInvM() {
   const section = qs('#app section');
-
   let zones = [];
   try {
     const z = await api('zonesList');
@@ -243,7 +332,6 @@ async function mountInvM() {
   `;
 
   const tbody = qs('#invTable tbody');
-
   function addRow(p = '', q = '', u = '', c = '') {
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -256,8 +344,8 @@ async function mountInvM() {
     tbody.appendChild(tr);
   }
   addRow();
-  qs('#btnAddRow').addEventListener('click', ()=> addRow());
 
+  qs('#btnAddRow').addEventListener('click', ()=> addRow());
   qs('#btnGenSheet').addEventListener('click', async ()=>{
     const res = await api('createInventaireMensuel', {
       zone: qs('#invmZone').value,
@@ -265,7 +353,6 @@ async function mountInvM() {
     });
     alert(res.status==='success' ? '✅ Feuille générée' : '❌ ' + res.message);
   });
-
   qs('#btnSaveInv').addEventListener('click', async ()=>{
     const lignes = [];
     qsa('#invTable tbody tr').forEach(tr=>{
