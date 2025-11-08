@@ -45,6 +45,40 @@
       transition: .4s;
       border-radius: 50%;
     }
+
+    @media (max-width: 768px) {
+  .grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .input-field {
+    width: 100%;
+  }
+
+  .input-field input,
+  .input-field select {
+    width: 100%;
+    font-size: 1rem;
+    padding: 0.6rem;
+    box-sizing: border-box;
+  }
+
+  .row-actions {
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .btn {
+    width: 100%;
+    border-radius: 10px;
+  }
+
+  table.list th, table.list td {
+    font-size: 0.9rem;
+  }
+}    
     input:checked + .slider { background-color: #C9A227; }
     input:checked + .slider:before { transform: translateX(24px); }
   </style>
