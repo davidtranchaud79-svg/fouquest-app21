@@ -1,112 +1,70 @@
-<!DOCTYPE html>
+peux tu me mettre a jour index.html <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Fouquet’s Joy • Gold Motion v17</title>
-
-  <!-- 🎨 PWA / Theme -->
-  <meta name="theme-color" content="#C9A227" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-
-  <!-- 🪪 Manifest + Icônes -->
-  <link rel="manifest" href="manifest.json" />
-  <link rel="icon" href="icons/icon-192.png" type="image/png" />
-  <link rel="apple-touch-icon" href="icons/icon-512.png" />
-
-  <!-- 📘 Styles + Scripts -->
-  <link rel="stylesheet" href="styles.css" />
+  <title>Fouquet’s Joy • Gold Motion v16.6</title>
+  <meta name="theme-color" content="#5A0D0D"/>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/favicon.ico">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script defer src="app.js"></script>
-
   <style>
-    body {
-      background-color: #FFF8E7;
-      margin: 0;
-      font-family: "Inter", sans-serif;
-      color: #2E2E2E;
-    }
-    header.topbar {
+    .toggle-container {
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
-      background: linear-gradient(90deg, #5A0D0D 0%, #7B1F1F 100%);
-      color: #FFF8E7;
-      padding: 0.8rem 1rem;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 0.8rem;
-    }
-    .brand img {
-      width: 42px;
-      height: 42px;
-      border-radius: 8px;
-      object-fit: cover;
-    }
-    .brand-title { font-size: 1.2rem; font-weight: 700; color: #FFF8E7; }
-    .brand-sub { font-size: 0.8rem; color: #C9A227; }
-    .status-badge {
-      font-size: 0.8rem;
-      background: #C9A227;
+      margin-top: 0.8rem;
+      font-weight: 500;
       color: #5A0D0D;
-      padding: 3px 8px;
-      border-radius: 12px;
-      font-weight: 600;
+      gap: 10px;
     }
-    nav.tabs {
-      display: flex;
-      overflow-x: auto;
-      background: #FFF8E7;
-      border-bottom: 2px solid #C9A227;
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 26px;
     }
-    .tab {
-      flex: 1;
-      padding: 0.6rem;
-      font-weight: 600;
-      color: #5A0D0D;
-      border: none;
-      background: transparent;
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
       cursor: pointer;
-      transition: 0.3s;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 26px;
     }
-    .tab.active {
-      background: #C9A227;
-      color: #FFF8E7;
-      border-radius: 6px 6px 0 0;
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px; width: 20px;
+      left: 3px; bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
     }
-    .container { padding: 1rem; }
-    footer.footer {
-      text-align: center;
-      padding: 1rem;
-      font-size: 0.8rem;
-      color: #7A6B47;
-      background: #FFF8E7;
-      border-top: 1px solid rgba(0,0,0,0.05);
-    }
+    input:checked + .slider { background-color: #C9A227; }
+    input:checked + .slider:before { transform: translateX(24px); }
   </style>
 </head>
 
 <body>
-  <!-- === HEADER === -->
   <header class="topbar">
     <div class="brand">
-      <img src="icons/icon-192.png" alt="Logo Fouquet’s Joy">
-      <div>
+      <div class="brand-badge">F</div>
+      <div class="brand-text">
         <div class="brand-title">Fouquet’s Joy</div>
         <div class="brand-sub">Gold Motion • Ivoire & Or</div>
       </div>
     </div>
     <div class="actions">
-      <span id="syncBadge" class="status-badge offline">Hors ligne</span>
-      <button class="btn ghost" id="btnSync">⇅ Sync</button>
+      <span id="syncBadge" class="status-badge offline" title="Statut">Hors ligne</span>
+      <button class="btn ghost" id="btnSync">⇅ Synchroniser</button>
     </div>
   </header>
 
-  <!-- === NAVIGATION === -->
   <nav class="tabs">
     <button class="tab active" data-view="dashboard">📊 Dashboard</button>
     <button class="tab" data-view="pertes">🗑️ Pertes</button>
@@ -117,8 +75,7 @@
   </nav>
 
   <main id="app" class="container"></main>
-
-  <footer class="footer">© Fouquet’s Joy — Gold Motion v17</footer>
+  <footer class="footer">© Fouquet’s Joy – Gold Motion v16.6</footer>
 
   <!-- === DASHBOARD === -->
   <template id="tpl-dashboard">
@@ -245,7 +202,7 @@
         </table>
         <div class="row-actions center">
           <button class="btn ghost" id="btnAddRow">➕ Ajouter une ligne</button>
-          <button class="btn success" id="btnSaveInv">💾 Valider</button>
+          <button class="btn success" id="btnSaveInv">💾 Valider l’inventaire</button>
         </div>
       </div>
     </section>
@@ -263,10 +220,15 @@
             <input id="recetteSearch" placeholder="Rechercher une recette...">
           </div>
           <div class="input-field" style="flex:1;">
-            <label for="recetteFactor">Multiplicateur</label>
-            <input id="recetteFactor" type="number" value="1" step="0.5" min="0.1">
+            <label for="recetteMulti">Multiplicateur</label>
+            <select id="recetteMulti">
+              <option value="1">×1 (base)</option>
+              <option value="0.5">×0.5</option>
+              <option value="2">×2</option>
+              <option value="3">×3</option>
+              <option value="5">×5</option>
+            </select>
           </div>
-          <button class="btn gold" id="btnApplyFactor">Appliquer</button>
         </div>
 
         <div id="recettesList" class="grid-cards"></div>
@@ -294,4 +256,4 @@
     </section>
   </template>
 </body>
-</html> peux tu juste mettre a niveau ce index.html sans  le changer 
+</html>
