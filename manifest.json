@@ -1,12 +1,24 @@
 {
-  "name": "Fouques’t Joy • Gold Motion",
-  "short_name": "Fouques’t Joy",
-  "start_url": ".",
+  "name": "Fouquet’s Joy • Gold Motion",
+  "short_name": "Fouquet’s Joy",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#FFF8E7",
   "theme_color": "#C9A227",
+  "orientation": "portrait",
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }
+
