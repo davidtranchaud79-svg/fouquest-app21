@@ -3,17 +3,58 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Fouquet’s Joy • Gold Motion</title>
-  <meta name="theme-color" content="#C9A227"/>
+  <title>Fouquet’s Joy • Gold Motion v16.5</title>
+  <meta name="theme-color" content="#5A0D0D"/>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/favicon.ico">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="styles.css">
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script defer src="app.js"></script>
+  <style>
+    .toggle-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-top: 0.8rem;
+      font-weight: 500;
+      color: #5A0D0D;
+      gap: 10px;
+    }
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 26px;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 26px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px; width: 20px;
+      left: 3px; bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #C9A227;
+    }
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+  </style>
 </head>
+
 <body>
-  <!-- === BARRE SUPÉRIEURE === -->
   <header class="topbar">
     <div class="brand">
       <div class="brand-badge">F</div>
@@ -28,7 +69,6 @@
     </div>
   </header>
 
-  <!-- === MENU NAVIGATION === -->
   <nav class="tabs">
     <button class="tab active" data-view="dashboard">📊 Dashboard</button>
     <button class="tab" data-view="pertes">🗑️ Pertes</button>
@@ -39,7 +79,7 @@
   </nav>
 
   <main id="app" class="container"></main>
-  <footer class="footer">© Fouquet’s Joy – v16.1</footer>
+  <footer class="footer">© Fouquet’s Joy – Gold Motion v16.5</footer>
 
   <!-- === DASHBOARD === -->
   <template id="tpl-dashboard">
@@ -80,8 +120,17 @@
       </div>
 
       <div class="card">
-        <div class="card-title">Pertes – 7 jours</div>
-        <canvas id="chartPertes" height="120"></canvas>
+        <div class="card-title">📉 Analyse des pertes</div>
+        <div class="toggle-container">
+          <span>Vue simple</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="togglePareto">
+            <span class="slider"></span>
+          </label>
+          <span>Pareto</span>
+        </div>
+        <canvas id="chartPertes" height="140"></canvas>
+        <div id="pertesLegend"></div>
       </div>
     </section>
   </template>
@@ -152,54 +201,46 @@
   </template>
 
   <!-- === INVENTAIRE MENSUEL === -->
- <template id="tpl-invm">
-  <section class="section">
-    <!-- === EN-TÊTE INVENTAIRE === -->
-    <div class="card invm-header">
-      <div class="card-title">🏷️ Inventaire Mensuel</div>
-      <div class="invm-header-grid">
-        <div class="input-field">
-          <label for="invmZone">Zone</label>
-          <select id="invmZone"></select>
-        </div>
-        <div class="input-field">
-          <label for="invmMois">Mois</label>
-          <input type="month" id="invmMois" />
-        </div>
-        <div class="input-field center">
-          <button class="btn gold large" id="btnInvmGenerate">📄 Générer la feuille</button>
+  <template id="tpl-invm">
+    <section class="section">
+      <div class="card invm-header">
+        <div class="card-title">🏷️ Inventaire Mensuel</div>
+        <div class="grid" style="align-items:end;">
+          <div class="input-field">
+            <label for="invmZone">Zone</label>
+            <select id="invmZone"></select>
+          </div>
+          <div class="input-field">
+            <label for="invmMois">Mois</label>
+            <input type="month" id="invmMois" />
+          </div>
+          <div class="input-field">
+            <button class="btn gold" id="btnGenSheet">📄 Générer la feuille</button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- === TABLEAU D’INVENTAIRE === -->
-    <div class="card invm-body">
-      <div class="card-subtitle">📋 Feuille d’inventaire</div>
-      <table class="list" id="invTable">
-        <thead>
-          <tr>
-            <th>Produit</th>
-            <th>Quantité</th>
-            <th>Unité</th>
-            <th>Commentaire</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <div class="row-actions center">
-        <button class="btn ghost" id="btnAddRow">➕ Ajouter une ligne</button>
+      <div class="card invm-body">
+        <div class="card-subtitle">📋 Feuille d’inventaire</div>
+        <table class="list" id="invTable">
+          <thead>
+            <tr>
+              <th>Produit</th>
+              <th>Quantité</th>
+              <th>Unité</th>
+              <th>Commentaire</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="row-actions center">
+          <button class="btn ghost" id="btnAddRow">➕ Ajouter une ligne</button>
+          <button class="btn success" id="btnSaveInv">💾 Valider l’inventaire</button>
+        </div>
       </div>
-    </div>
-
-    <!-- === VALIDATION === -->
-    <div class="card invm-footer">
-      <div class="row-actions center">
-        <button class="btn success large" id="btnSaveInv">💾 Valider l’inventaire</button>
-      </div>
-    </div>
-  </section>
-</template>
+    </section>
+  </template>
 
   <!-- === RECETTES === -->
   <template id="tpl-recettes">
@@ -211,7 +252,6 @@
           <input id="recetteSearch" placeholder="Rechercher une recette...">
         </div>
         <div id="recettesList" class="grid-cards"></div>
-        <div id="recetteDetail" class="recette-detail"></div>
       </div>
     </section>
   </template>
@@ -228,7 +268,11 @@
           </div>
           <div class="input-field">
             <label for="setTz">Fuseau horaire</label>
-            <select id="setTz"><option>Europe/Paris</option><option>Europe/Rome</option><option>America/New_York</option></select>
+            <select id="setTz">
+              <option>Europe/Paris</option>
+              <option>Europe/Rome</option>
+              <option>America/New_York</option>
+            </select>
           </div>
           <div class="input-field">
             <label for="setEmail">Email Cost-Control</label>
@@ -236,10 +280,17 @@
           </div>
           <div class="input-field">
             <label for="setLang">Langue</label>
-            <select id="setLang"><option value="fr">Français</option><option value="en">English</option><option value="it">Italiano</option><option value="es">Español</option></select>
+            <select id="setLang">
+              <option value="fr">Français</option>
+              <option value="en">English</option>
+              <option value="it">Italiano</option>
+              <option value="es">Español</option>
+            </select>
           </div>
         </div>
-        <div class="row-actions"><button class="btn" id="btnSetSave">💾 Enregistrer</button></div>
+        <div class="row-actions">
+          <button class="btn" id="btnSetSave">💾 Enregistrer</button>
+        </div>
       </div>
     </section>
   </template>
