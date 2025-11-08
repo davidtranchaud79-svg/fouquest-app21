@@ -1,5 +1,5 @@
 // ============================================================
-// 🍷 Fouquet’s Joy — Gold Motion v17.0
+// 🍷 Fouquet’s Joy — Gold Motion v17.1
 // Frontend aligné avec code.gs (Pareto pertes + unités auto + multiplicateur recettes)
 // ============================================================
 
@@ -64,7 +64,6 @@ async function render(view){
 // 📊 DASHBOARD – Pareto pertes + bascule simple
 // ============================================================
 async function mountDashboard(){
-  // KPI stock
   try{
     const etat = await api('getEtatStock');
     if(etat.status==='success'){
@@ -73,7 +72,6 @@ async function mountDashboard(){
     }
   }catch(e){ console.warn('Etat stock', e); }
 
-  // KPI pertes kg
   try {
     const pertes = await api('getPertesPoids');
     if(pertes.status === 'success'){
@@ -82,7 +80,6 @@ async function mountDashboard(){
     }
   } catch(e){}
 
-  // Tableau stock
   try{
     const detail = await api('getStockDetail');
     const tbody = qs('#tableStockDetail tbody');
@@ -101,7 +98,6 @@ async function mountDashboard(){
     });
   }catch(e){ console.warn('Stock detail', e); }
 
-  // Graphiques pertes
   const ctx = qs('#chartPertes');
   const legendContainer = qs('#pertesLegend');
   const toggle = qs('#togglePareto');
@@ -175,10 +171,8 @@ async function mountDashboard(){
     } catch(e){ console.warn('Graph Pareto', e); renderSimple(); }
   }
 
-  // Bascule
   if (toggle) {
     toggle.onchange = () => toggle.checked ? renderPareto() : renderSimple();
-    // défaut : Pareto activé
     toggle.checked = true;
     await renderPareto();
   } else {
@@ -357,7 +351,7 @@ async function mountInvM() {
 // ============================================================
 // 🍽️ RECETTES — multiplicateur de portions
 // ============================================================
-let recetteCache = {};   // { code: {recette, factorShown} }
+let recetteCache = {};
 
 async function mountRecettes(){
   try{
@@ -366,7 +360,6 @@ async function mountRecettes(){
     const factorInput = qs('#recetteFactor');
     const applyBtn = qs('#btnApplyFactor');
 
-    // Appliquer le multiplicateur actif à toutes les cartes ouvertes
     const applyFactorToOpen = ()=>{
       const factor = Math.max(0, parseFloat(factorInput?.value || '1') || 1);
       qsa('.recette-card.open').forEach(card=>{
@@ -376,6 +369,7 @@ async function mountRecettes(){
       });
     };
     if (applyBtn) applyBtn.onclick = applyFactorToOpen;
+    if (factorInput) factorInput.addEventListener('input', applyFactorToOpen);
 
     if(res.status==='success'){
       list.innerHTML = res.recettes.map(r=>`
@@ -390,7 +384,6 @@ async function mountRecettes(){
           <div class="recette-detail" style="display:none;"></div>
         </div>`).join('');
 
-      // interactions cartes
       qsa('.recette-card', list).forEach(card=>{
         const btn = card.querySelector('.btn.small');
         btn.addEventListener('click', async (ev)=>{
@@ -399,13 +392,11 @@ async function mountRecettes(){
           if(detail.style.display==='block'){
             detail.style.display='none'; detail.innerHTML=''; card.classList.remove('open'); btn.textContent='Voir'; return;
           }
-          // refermer les autres
           qsa('.recette-detail').forEach(d=>{d.style.display='none'; d.innerHTML=''; d.parentElement.classList.remove('open');});
           qsa('.recette-card .btn.small').forEach(b=> b.textContent='Voir');
 
           detail.innerHTML = '<div class="muted">Chargement...</div>'; detail.style.display='block'; card.classList.add('open'); btn.textContent='Fermer';
 
-          // cache ou API
           const code = card.dataset.code;
           if (!recetteCache[code]) {
             const r = await api('getRecette', {code});
@@ -417,7 +408,6 @@ async function mountRecettes(){
         });
       });
 
-      // filtre recherche
       qs('#recetteSearch').addEventListener('input', e=>{
         const q = e.target.value.toLowerCase();
         qsa('.recette-card', list).forEach(c=>{
@@ -435,24 +425,25 @@ async function mountRecettes(){
 
 function renderRecetteDetailInCard(card, recette, factor){
   const detail = card.querySelector('.recette-detail');
-  const basePortions = Number(recette.portions||1);
-  const totalPortions = (basePortions * factor) || 0;
+  const basePortions = Number(recette.portions || 1);
+  const factorNum = Math.max(0, parseFloat(factor) || 1);
+  const totalPortions = basePortions * factorNum;
 
-  const rows = (recette.ingredients||[]).map(i=>{
-    const q = Number(i.quantite)||0;
-    const scaled = q * factor;
+  const rows = (recette.ingredients || []).map(i => {
+    const q = Number(i.quantite) || 0;
+    const scaled = q * factorNum;
     return `<tr>
       <td>${i.produit}</td>
       <td style="text-align:right">${scaled.toFixed(2)}</td>
       <td>${i.unite}</td>
-      <td>${i.zone||''}</td>
+      <td>${i.zone || ''}</td>
     </tr>`;
   }).join('');
 
   detail.innerHTML = `
     <div class="recette-body">
       <div class="muted" style="margin-bottom:6px">
-        Base: ${basePortions} p. • Multiplicateur appliqué: <b>${factor}</b> → Total: <b>${totalPortions.toFixed(1)} p.</b>
+        Base : ${basePortions} p. • Multiplicateur : <b>${factorNum}</b> → Total : <b>${totalPortions.toFixed(1)} p.</b>
       </div>
       <table class="list mini">
         <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Zone</th></tr></thead>
