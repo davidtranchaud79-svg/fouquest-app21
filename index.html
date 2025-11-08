@@ -9,17 +9,24 @@
   <meta name="theme-color" content="#C9A227" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="description" content="Application de gestion des pertes, inventaires et recettes — Fouquet’s Joy Gold Motion Edition." />
 
   <!-- 🪪 Manifest + Icônes -->
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icons/icon-192.png" type="image/png" />
   <link rel="apple-touch-icon" href="icons/icon-512.png" />
 
+  <!-- 🧭 Progressive enhancement -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="application-name" content="Fouquet’s Joy" />
+  <meta name="msapplication-TileColor" content="#C9A227" />
+
   <!-- 📘 Styles + Scripts -->
   <link rel="stylesheet" href="styles.css" />
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script defer src="app.js"></script>
 
+  <!-- 🧩 Internal adjustments -->
   <style>
     body {
       background-color: #FFF8E7;
@@ -36,11 +43,7 @@
       padding: 0.8rem 1rem;
       box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 0.8rem;
-    }
+    .brand { display: flex; align-items: center; gap: 0.8rem; }
     .brand img {
       width: 42px;
       height: 42px;
@@ -94,7 +97,7 @@
   <!-- === HEADER === -->
   <header class="topbar">
     <div class="brand">
-      <img src="icons/icon-192.png" alt="Logo Fouquet’s Joy">
+      <img src="icons/icon-192.png" alt="Logo Fouquet’s Joy" loading="lazy">
       <div>
         <div class="brand-title">Fouquet’s Joy</div>
         <div class="brand-sub">Gold Motion • Ivoire & Or</div>
@@ -102,12 +105,12 @@
     </div>
     <div class="actions">
       <span id="syncBadge" class="status-badge offline">Hors ligne</span>
-      <button class="btn ghost" id="btnSync">⇅ Sync</button>
+      <button class="btn ghost" id="btnSync" aria-label="Synchroniser les données">⇅ Sync</button>
     </div>
   </header>
 
   <!-- === NAVIGATION === -->
-  <nav class="tabs">
+  <nav class="tabs" role="navigation">
     <button class="tab active" data-view="dashboard">📊 Dashboard</button>
     <button class="tab" data-view="pertes">🗑️ Pertes</button>
     <button class="tab" data-view="invj">📦 Inventaire J.</button>
@@ -256,7 +259,6 @@
     <section class="section">
       <div class="card">
         <div class="card-title">🍽️ Recettes</div>
-
         <div class="grid" style="margin-bottom:10px; align-items:end;">
           <div class="input-field" style="flex:2;">
             <label for="recetteSearch">Recherche</label>
@@ -268,7 +270,6 @@
           </div>
           <button class="btn gold" id="btnApplyFactor">Appliquer</button>
         </div>
-
         <div id="recettesList" class="grid-cards"></div>
       </div>
     </section>
