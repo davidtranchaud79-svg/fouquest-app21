@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Fouquet’s Joy • Gold Motion v16.5</title>
+  <title>Fouquet’s Joy • Gold Motion v16.6</title>
   <meta name="theme-color" content="#5A0D0D"/>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/favicon.ico">
@@ -45,12 +45,8 @@
       transition: .4s;
       border-radius: 50%;
     }
-    input:checked + .slider {
-      background-color: #C9A227;
-    }
-    input:checked + .slider:before {
-      transform: translateX(24px);
-    }
+    input:checked + .slider { background-color: #C9A227; }
+    input:checked + .slider:before { transform: translateX(24px); }
   </style>
 </head>
 
@@ -79,7 +75,7 @@
   </nav>
 
   <main id="app" class="container"></main>
-  <footer class="footer">© Fouquet’s Joy – Gold Motion v16.5</footer>
+  <footer class="footer">© Fouquet’s Joy – Gold Motion v16.6</footer>
 
   <!-- === DASHBOARD === -->
   <template id="tpl-dashboard">
@@ -107,12 +103,7 @@
         <table class="list" id="tableStockDetail">
           <thead>
             <tr>
-              <th>Produit</th>
-              <th>Qté</th>
-              <th>Unité</th>
-              <th>Prix (€)</th>
-              <th>Valeur (€)</th>
-              <th>Zone</th>
+              <th>Produit</th><th>Qté</th><th>Unité</th><th>Prix (€)</th><th>Valeur (€)</th><th>Zone</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -124,8 +115,7 @@
         <div class="toggle-container">
           <span>Vue simple</span>
           <label class="toggle-switch">
-            <input type="checkbox" id="togglePareto">
-            <span class="slider"></span>
+            <input type="checkbox" id="togglePareto"><span class="slider"></span>
           </label>
           <span>Pareto</span>
         </div>
@@ -141,25 +131,20 @@
       <div class="card">
         <div class="card-title">🗑️ Saisie des pertes</div>
         <div class="grid">
-          <div class="input-field">
-            <label for="pertesProduit">Produit</label>
+          <div class="input-field"><label for="pertesProduit">Produit</label>
             <input id="pertesProduit" list="dlProduitsPertes" placeholder="Choisir ou saisir" />
             <datalist id="dlProduitsPertes"></datalist>
           </div>
-          <div class="input-field">
-            <label for="pertesQte">Quantité</label>
+          <div class="input-field"><label for="pertesQte">Quantité</label>
             <input id="pertesQte" type="number" step="0.01" placeholder="Ex. 1.20"/>
           </div>
-          <div class="input-field">
-            <label for="pertesUnite">Unité</label>
+          <div class="input-field"><label for="pertesUnite">Unité</label>
             <input id="pertesUnite" placeholder="kg / L / pièce"/>
           </div>
-          <div class="input-field">
-            <label for="pertesMotif">Motif</label>
+          <div class="input-field"><label for="pertesMotif">Motif</label>
             <input id="pertesMotif" placeholder="DLUO / Casse / Surcuisson"/>
           </div>
-          <div class="input-field">
-            <label for="pertesComment">Commentaire</label>
+          <div class="input-field"><label for="pertesComment">Commentaire</label>
             <input id="pertesComment" placeholder="Optionnel"/>
           </div>
         </div>
@@ -177,17 +162,14 @@
       <div class="card">
         <div class="card-title">📦 Inventaire journalier</div>
         <div class="grid">
-          <div class="input-field">
-            <label for="invjProduit">Produit</label>
+          <div class="input-field"><label for="invjProduit">Produit</label>
             <input id="invjProduit" list="dlProduitsInvJ" placeholder="Nom du produit"/>
             <datalist id="dlProduitsInvJ"></datalist>
           </div>
-          <div class="input-field">
-            <label for="invjQte">Quantité</label>
+          <div class="input-field"><label for="invjQte">Quantité</label>
             <input id="invjQte" type="number" step="0.01" placeholder="Ex. 2.50"/>
           </div>
-          <div class="input-field">
-            <label for="invjUnite">Unité</label>
+          <div class="input-field"><label for="invjUnite">Unité</label>
             <input id="invjUnite" placeholder="kg / L / pièce"/>
           </div>
         </div>
@@ -206,32 +188,16 @@
       <div class="card invm-header">
         <div class="card-title">🏷️ Inventaire Mensuel</div>
         <div class="grid" style="align-items:end;">
-          <div class="input-field">
-            <label for="invmZone">Zone</label>
-            <select id="invmZone"></select>
-          </div>
-          <div class="input-field">
-            <label for="invmMois">Mois</label>
-            <input type="month" id="invmMois" />
-          </div>
-          <div class="input-field">
-            <button class="btn gold" id="btnGenSheet">📄 Générer la feuille</button>
-          </div>
+          <div class="input-field"><label for="invmZone">Zone</label><select id="invmZone"></select></div>
+          <div class="input-field"><label for="invmMois">Mois</label><input type="month" id="invmMois"/></div>
+          <div class="input-field"><button class="btn gold" id="btnGenSheet">📄 Générer la feuille</button></div>
         </div>
       </div>
 
       <div class="card invm-body">
         <div class="card-subtitle">📋 Feuille d’inventaire</div>
         <table class="list" id="invTable">
-          <thead>
-            <tr>
-              <th>Produit</th>
-              <th>Quantité</th>
-              <th>Unité</th>
-              <th>Commentaire</th>
-              <th></th>
-            </tr>
-          </thead>
+          <thead><tr><th>Produit</th><th>Quantité</th><th>Unité</th><th>Commentaire</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
         <div class="row-actions center">
@@ -247,10 +213,24 @@
     <section class="section">
       <div class="card">
         <div class="card-title">🍽️ Recettes</div>
-        <div class="input-field" style="margin-bottom:10px">
-          <label for="recetteSearch">Recherche</label>
-          <input id="recetteSearch" placeholder="Rechercher une recette...">
+
+        <div class="grid" style="margin-bottom:10px; align-items:end;">
+          <div class="input-field" style="flex:2;">
+            <label for="recetteSearch">Recherche</label>
+            <input id="recetteSearch" placeholder="Rechercher une recette...">
+          </div>
+          <div class="input-field" style="flex:1;">
+            <label for="recetteMulti">Multiplicateur</label>
+            <select id="recetteMulti">
+              <option value="1">×1 (base)</option>
+              <option value="0.5">×0.5</option>
+              <option value="2">×2</option>
+              <option value="3">×3</option>
+              <option value="5">×5</option>
+            </select>
+          </div>
         </div>
+
         <div id="recettesList" class="grid-cards"></div>
       </div>
     </section>
@@ -262,35 +242,16 @@
       <div class="card">
         <div class="card-title">⚙️ Paramètres</div>
         <div class="grid">
-          <div class="input-field">
-            <label for="setEtab">Établissement</label>
-            <input id="setEtab" placeholder="Fouquet’s Joy"/>
-          </div>
-          <div class="input-field">
-            <label for="setTz">Fuseau horaire</label>
-            <select id="setTz">
-              <option>Europe/Paris</option>
-              <option>Europe/Rome</option>
-              <option>America/New_York</option>
-            </select>
-          </div>
-          <div class="input-field">
-            <label for="setEmail">Email Cost-Control</label>
-            <input id="setEmail" placeholder="costcontrol@fouquets.fr"/>
-          </div>
-          <div class="input-field">
-            <label for="setLang">Langue</label>
-            <select id="setLang">
-              <option value="fr">Français</option>
-              <option value="en">English</option>
-              <option value="it">Italiano</option>
-              <option value="es">Español</option>
-            </select>
-          </div>
+          <div class="input-field"><label for="setEtab">Établissement</label>
+            <input id="setEtab" placeholder="Fouquet’s Joy"/></div>
+          <div class="input-field"><label for="setTz">Fuseau horaire</label>
+            <select id="setTz"><option>Europe/Paris</option><option>Europe/Rome</option><option>America/New_York</option></select></div>
+          <div class="input-field"><label for="setEmail">Email Cost-Control</label>
+            <input id="setEmail" placeholder="costcontrol@fouquets.fr"/></div>
+          <div class="input-field"><label for="setLang">Langue</label>
+            <select id="setLang"><option value="fr">Français</option><option value="en">English</option><option value="it">Italiano</option><option value="es">Español</option></select></div>
         </div>
-        <div class="row-actions">
-          <button class="btn" id="btnSetSave">💾 Enregistrer</button>
-        </div>
+        <div class="row-actions"><button class="btn" id="btnSetSave">💾 Enregistrer</button></div>
       </div>
     </section>
   </template>
