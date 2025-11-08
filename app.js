@@ -1,6 +1,6 @@
 // ============================================================
-// 🍷 Fouquet’s Joy — Gold Motion v17.1
-// Frontend aligné avec code.gs (Pareto pertes + unités auto + multiplicateur recettes)
+// 🍷 Fouquet’s Joy — Gold Motion v17.2
+// Frontend aligné avec code.gs (Pareto pertes + unités auto + multiplicateur recettes autonome)
 // ============================================================
 
 // ===== CONFIG =====
@@ -32,6 +32,12 @@ function setBadge(state){
   b.classList.toggle('offline', state!=='online');
   b.classList.toggle('online', state==='online');
 }
+const toNum = v => {
+  if (v==null) return 0;
+  const s = String(v).replace(',', '.');
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : 0;
+};
 
 // ===== NAVIGATION =====
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -349,27 +355,14 @@ async function mountInvM() {
 }
 
 // ============================================================
-// 🍽️ RECETTES — multiplicateur de portions
+// 🍽️ RECETTES — multiplicateur autonome par carte
 // ============================================================
-let recetteCache = {};
+let recetteCache = {};   // { code: { recette, factor } }
 
 async function mountRecettes(){
   try{
     const res = await api('getRecettes');
     const list = qs('#recettesList');
-    const factorInput = qs('#recetteFactor');
-    const applyBtn = qs('#btnApplyFactor');
-
-    const applyFactorToOpen = ()=>{
-      const factor = Math.max(0, parseFloat(factorInput?.value || '1') || 1);
-      qsa('.recette-card.open').forEach(card=>{
-        const code = card.dataset.code;
-        const cache = recetteCache[code];
-        if (cache?.recette) renderRecetteDetailInCard(card, cache.recette, factor);
-      });
-    };
-    if (applyBtn) applyBtn.onclick = applyFactorToOpen;
-    if (factorInput) factorInput.addEventListener('input', applyFactorToOpen);
 
     if(res.status==='success'){
       list.innerHTML = res.recettes.map(r=>`
@@ -392,6 +385,7 @@ async function mountRecettes(){
           if(detail.style.display==='block'){
             detail.style.display='none'; detail.innerHTML=''; card.classList.remove('open'); btn.textContent='Voir'; return;
           }
+          // refermer les autres
           qsa('.recette-detail').forEach(d=>{d.style.display='none'; d.innerHTML=''; d.parentElement.classList.remove('open');});
           qsa('.recette-card .btn.small').forEach(b=> b.textContent='Voir');
 
@@ -401,20 +395,23 @@ async function mountRecettes(){
           if (!recetteCache[code]) {
             const r = await api('getRecette', {code});
             if(r.status!=='success'){ detail.innerHTML='<div class="muted">Recette introuvable.</div>'; return; }
-            recetteCache[code] = { recette: r.recette };
+            recetteCache[code] = { recette: r.recette, factor: 1 };
           }
-          const factor = Math.max(0, parseFloat(qs('#recetteFactor')?.value || '1') || 1);
-          renderRecetteDetailInCard(card, recetteCache[code].recette, factor);
+          renderRecetteDetailInCard(card, recetteCache[code].recette, recetteCache[code].factor ?? 1);
         });
       });
 
-      qs('#recetteSearch').addEventListener('input', e=>{
-        const q = e.target.value.toLowerCase();
-        qsa('.recette-card', list).forEach(c=>{
-          const name = c.querySelector('strong').textContent.toLowerCase();
-          c.style.display = name.includes(q) ? '' : 'none';
+      // filtre recherche
+      const search = qs('#recetteSearch');
+      if (search) {
+        search.addEventListener('input', e=>{
+          const q = e.target.value.toLowerCase();
+          qsa('.recette-card', list).forEach(c=>{
+            const name = c.querySelector('strong').textContent.toLowerCase();
+            c.style.display = name.includes(q) ? '' : 'none';
+          });
         });
-      });
+      }
     } else {
       qs('#recettesList').innerHTML = '<div class="muted">Aucune recette.</div>';
     }
@@ -423,33 +420,64 @@ async function mountRecettes(){
   }
 }
 
-function renderRecetteDetailInCard(card, recette, factor){
+function renderRecetteDetailInCard(card, recette, factorInit){
+  const code = card.dataset.code;
   const detail = card.querySelector('.recette-detail');
-  const basePortions = Number(recette.portions || 1);
-  const factorNum = Math.max(0, parseFloat(factor) || 1);
-  const totalPortions = basePortions * factorNum;
+  const basePortions = toNum(recette.portions || 1);
+  const f0 = Math.max(0, toNum(factorInit) || 1);
 
-  const rows = (recette.ingredients || []).map(i => {
-    const q = Number(i.quantite) || 0;
-    const scaled = q * factorNum;
-    return `<tr>
-      <td>${i.produit}</td>
-      <td style="text-align:right">${scaled.toFixed(2)}</td>
-      <td>${i.unite}</td>
-      <td>${i.zone || ''}</td>
-    </tr>`;
-  }).join('');
-
+  // squelette avec contrôles locaux
   detail.innerHTML = `
     <div class="recette-body">
-      <div class="muted" style="margin-bottom:6px">
-        Base : ${basePortions} p. • Multiplicateur : <b>${factorNum}</b> → Total : <b>${totalPortions.toFixed(1)} p.</b>
+      <div class="row-actions" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+        <span class="muted">Multiplicateur :</span>
+        <button class="btn ghost small factor-dec" type="button">−</button>
+        <input class="factor-input" type="number" step="0.1" min="0" value="${f0}" style="width:90px">
+        <button class="btn ghost small factor-inc" type="button">+</button>
+        <span class="info-line muted" style="margin-left:8px"></span>
       </div>
       <table class="list mini">
         <thead><tr><th>Produit</th><th>Qté</th><th>Unité</th><th>Zone</th></tr></thead>
-        <tbody>${rows}</tbody>
+        <tbody></tbody>
       </table>
     </div>`;
+
+  const input  = detail.querySelector('.factor-input');
+  const decBtn = detail.querySelector('.factor-dec');
+  const incBtn = detail.querySelector('.factor-inc');
+  const tbody  = detail.querySelector('tbody');
+  const info   = detail.querySelector('.info-line');
+
+  const renderRows = (factor)=>{
+    const rows = (recette.ingredients||[]).map(i=>{
+      const q = toNum(i.quantite);
+      const scaled = q * factor;
+      return `<tr>
+        <td>${i.produit}</td>
+        <td style="text-align:right">${scaled.toFixed(2)}</td>
+        <td>${i.unite}</td>
+        <td>${i.zone||''}</td>
+      </tr>`;
+    }).join('');
+    tbody.innerHTML = rows;
+    const totalPortions = basePortions * factor;
+    info.innerHTML = `Base ${basePortions} p. → <b>${totalPortions.toFixed(1)} p.</b> (×${factor.toFixed(2)})`;
+  };
+
+  const setFactor = (f)=>{
+    const nf = Math.max(0, toNum(f) || 1);
+    input.value = String(nf);
+    recetteCache[code].factor = nf;
+    renderRows(nf);
+  };
+
+  // listeners
+  input.addEventListener('input', () => setFactor(input.value));
+  decBtn.addEventListener('click', ()=> setFactor(toNum(input.value) - 1));
+  incBtn.addEventListener('click', ()=> setFactor(toNum(input.value) + 1));
+
+  // first render
+  setFactor(f0);
 }
 
 // ============================================================
