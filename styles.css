@@ -1,31 +1,39 @@
 /* ============================================================
-   🍷 Fouquet’s Joy – Gold Motion v16.2
-   Thème : Bordeaux profond & Or biseauté
+   🍷 Fouquet’s Joy – Gold Motion v17.3
+   Thème : Bordeaux profond, Ivoire & Or
+   + Inventaire mensuel intelligent
    ============================================================ */
 
-/* === RESET & BASE === */
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
-  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
-  background: #4a0909;            /* 🌹 fond bordeaux profond */
+  font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(201, 162, 39, 0.12), transparent 28%),
+    linear-gradient(180deg, #5a0d0d 0%, #4a0909 45%, #2f0505 100%);
   color: #f8f3e6;
   line-height: 1.5;
   font-size: 15px;
+  min-height: 100vh;
 }
 
+h1,
+h2,
 h3 {
   margin: 0.5em 0;
   color: #ffefc1;
-}
-
-.muted {
-  color: #d6c6a8;
-  font-size: 0.9em;
 }
 
 a {
@@ -33,7 +41,21 @@ a {
   text-decoration: none;
 }
 
-/* === LAYOUT === */
+hr {
+  border: none;
+  border-top: 1px solid rgba(201, 162, 39, 0.28);
+  margin: 1.2rem 0;
+}
+
+.muted {
+  color: #d6c6a8;
+  font-size: 0.9em;
+}
+
+/* ============================================================
+   LAYOUT GLOBAL
+   ============================================================ */
+
 .topbar {
   background: linear-gradient(90deg, #5a0d0d, #7b1313);
   color: #fff8e7;
@@ -41,266 +63,483 @@ a {
   align-items: center;
   justify-content: space-between;
   padding: 0.8em 1em;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
   position: sticky;
   top: 0;
   z-index: 99;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.35);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
 }
 
 .brand-badge {
-  background: #c9a227;
-  color: #fff;
-  font-weight: bold;
+  background: linear-gradient(145deg, #c9a227, #e2c45d);
+  color: #5a0d0d;
+  font-weight: 900;
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 0 6px rgba(0,0,0,0.25);
+  box-shadow:
+    inset 0 0 6px rgba(255, 255, 255, 0.35),
+    0 3px 8px rgba(0, 0, 0, 0.35);
 }
 
-.brand-title { font-weight: 600; font-size: 1.1em; }
-.brand-sub   { font-size: 0.8em; color: #ffecc3; }
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
 
-.actions { display: flex; align-items: center; gap: 1em; }
+.brand-title {
+  font-weight: 700;
+  font-size: 1.12em;
+}
 
-/* === STATUS BADGE === */
+.brand-sub {
+  font-size: 0.8em;
+  color: #ffecc3;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+}
+
+/* ============================================================
+   STATUS BADGE
+   ============================================================ */
+
 .status-badge {
-  padding: 0.3em 0.8em;
+  padding: 0.35em 0.85em;
   border-radius: 999px;
   font-size: 0.8em;
-  font-weight: 600;
-  transition: 0.3s;
+  font-weight: 700;
+  transition: 0.3s ease;
+  white-space: nowrap;
 }
-.status-badge.online  { background: #c9a227; color: #fff; }
-.status-badge.offline { background: #7a6a4f; color: #fff; }
 
-/* === NAVIGATION === */
+.status-badge.online {
+  background: #c9a227;
+  color: #4a0909;
+}
+
+.status-badge.offline {
+  background: #7a6a4f;
+  color: #fff;
+}
+
+.status-badge.error {
+  background: #b32222;
+  color: #fff;
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+
 .tabs {
   display: flex;
-  background: #5a0d0d;
+  background: rgba(90, 13, 13, 0.95);
   border-bottom: 2px solid #c9a227;
   overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #c9a227 #5a0d0d;
 }
+
+.tabs::-webkit-scrollbar {
+  height: 6px;
+}
+
+.tabs::-webkit-scrollbar-track {
+  background: #5a0d0d;
+}
+
+.tabs::-webkit-scrollbar-thumb {
+  background: #c9a227;
+  border-radius: 999px;
+}
+
 .tab {
   flex: 1;
+  min-width: max-content;
   border: none;
   background: transparent;
-  padding: 0.9em;
-  font-weight: 600;
+  padding: 0.9em 1em;
+  font-weight: 700;
   cursor: pointer;
   color: #f8eec9;
-  transition: 0.3s;
+  transition: 0.25s ease;
 }
-.tab:hover { background: rgba(255,255,255,0.1); }
-.tab.active { background: #c9a227; color: #fff; }
 
-/* === SECTIONS === */
+.tab:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tab.active {
+  background: linear-gradient(90deg, #c9a227, #e2c45d);
+  color: #4a0909;
+}
+
+/* ============================================================
+   CONTAINER & SECTIONS
+   ============================================================ */
+
 .container {
   padding: 1em;
-  max-width: 1100px;
+  max-width: 1150px;
   margin: auto;
 }
+
 .section {
   display: flex;
   flex-direction: column;
   gap: 1.2em;
 }
 
-/* === CARDS === */
+/* ============================================================
+   CARDS
+   ============================================================ */
+
 .card {
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.065);
+  border-radius: 16px;
   padding: 1em 1.2em;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.32);
   backdrop-filter: blur(8px);
+  border: 1px solid rgba(201, 162, 39, 0.18);
   transition: all 0.25s ease;
 }
+
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 14px rgba(0,0,0,0.4);
-}
-.card-title {
-  font-weight: 600;
-  color: #ffefc1;
-  margin-bottom: 0.6em;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.42);
 }
 
-/* === KPI === */
+.card-title,
+.card-subtitle {
+  font-weight: 700;
+  color: #ffefc1;
+  margin-bottom: 0.65em;
+}
+
+.card-subtitle {
+  font-size: 1em;
+}
+
+/* ============================================================
+   KPI
+   ============================================================ */
+
 .grid-3 {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 1em;
 }
+
 .kpi {
   text-align: center;
-  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(201,162,39,0.15));
-  border: 1px solid rgba(201,162,39,0.3);
-  border-radius: 10px;
-  padding: 0.8em 0.5em;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.08),
+    rgba(201, 162, 39, 0.16)
+  );
+  border: 1px solid rgba(201, 162, 39, 0.35);
+  border-radius: 14px;
+  padding: 0.9em 0.6em;
   transition: transform 0.3s ease;
 }
-.kpi:hover { transform: translateY(-3px); }
-.kpi-title { font-weight: 600; color: #f4e5b3; margin-bottom: 0.2em; }
+
+.kpi:hover {
+  transform: translateY(-3px);
+}
+
+.kpi-title {
+  font-weight: 700;
+  color: #f4e5b3;
+  margin-bottom: 0.25em;
+}
+
 .kpi-value {
   font-size: 1.9em;
   color: #fff8e7;
-  font-weight: 700;
+  font-weight: 800;
 }
-.kpi-sub { font-size: 0.9em; color: #d6c6a8; }
 
-/* === TABLE === */
+.kpi-sub {
+  font-size: 0.9em;
+  color: #d6c6a8;
+}
+
+/* ============================================================
+   TABLES
+   ============================================================ */
+
 table.list {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.95em;
   color: #fff8e7;
+  overflow: hidden;
+  border-radius: 12px;
 }
-table.list th, table.list td {
-  padding: 0.6em;
-  border-bottom: 1px solid rgba(201,162,39,0.3);
+
+table.list th,
+table.list td {
+  padding: 0.65em;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.26);
+  vertical-align: middle;
 }
+
 table.list thead {
-  background: rgba(201,162,39,0.15);
+  background: rgba(201, 162, 39, 0.16);
   color: #ffefc1;
   text-align: left;
 }
-table.list tbody tr:hover { background: rgba(255,255,255,0.08); }
 
-/* === INPUTS === */
+table.list tbody tr:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+table.list.mini th,
+table.list.mini td {
+  padding: 0.45em 0.55em;
+  font-size: 0.9em;
+}
+
+/* ============================================================
+   FORMULAIRES
+   ============================================================ */
+
+.input-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28em;
+}
+
 .input-field label {
-  font-weight: 600;
+  font-weight: 700;
   color: #ffefc1;
-  margin-bottom: 0.2em;
+  margin-bottom: 0.15em;
 }
+
 .input-field input,
-.input-field select {
-  border: 1px solid rgba(201,162,39,0.4);
-  border-radius: 8px;
-  padding: 0.6em 0.8em;
+.input-field select,
+.input-field textarea {
+  width: 100%;
+  border: 1px solid rgba(201, 162, 39, 0.42);
+  border-radius: 10px;
+  padding: 0.65em 0.85em;
   font-size: 1em;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   color: #fff8e7;
-  transition: 0.2s;
+  transition: 0.2s ease;
+  font-family: inherit;
 }
+
+.input-field textarea {
+  min-height: 130px;
+  resize: vertical;
+}
+
+.input-field input::placeholder,
+.input-field textarea::placeholder {
+  color: rgba(255, 248, 231, 0.55);
+}
+
 .input-field input:focus,
-.input-field select:focus {
+.input-field select:focus,
+.input-field textarea:focus {
   outline: none;
   border-color: #c9a227;
-  box-shadow: 0 0 0 2px rgba(201,162,39,0.3);
+  box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.3);
+  background: rgba(255, 255, 255, 0.14);
 }
 
-/* === GRID UTILITY === */
+select option {
+  background: #4a0909;
+  color: #fff8e7;
+}
+
+.locked {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #d6c6a8 !important;
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   GRID & ACTIONS
+   ============================================================ */
+
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 1em;
 }
+
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1em;
+}
+
 .row-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.8em;
-  margin-top: 0.8em;
+  margin-top: 0.9em;
 }
 
-/* === BUTTONS === */
+.row-actions.center {
+  justify-content: center;
+}
+
+/* ============================================================
+   BOUTONS
+   ============================================================ */
+
 .btn {
   background: #c9a227;
-  color: #fff;
+  color: #4a0909;
   border: none;
-  border-radius: 6px 18px 6px 18px;   /* 🔶 angles cassés */
-  padding: 0.6em 1.3em;
-  font-weight: 600;
+  border-radius: 6px 18px 6px 18px;
+  padding: 0.65em 1.3em;
+  font-weight: 800;
   cursor: pointer;
   transition: all 0.25s ease;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.32);
+  font-family: inherit;
 }
+
 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 10px rgba(0,0,0,0.4);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.42);
 }
+
 .btn:active {
   transform: translateY(0);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
 }
-.btn.success { background: #2e8b57; }
-.btn.danger  { background: #b32222; }
+
+.btn.success {
+  background: #2e8b57;
+  color: #fff;
+}
+
+.btn.danger {
+  background: #b32222;
+  color: #fff;
+}
+
 .btn.ghost {
   background: transparent;
   border: 1px solid #c9a227;
-  color: #c9a227;
+  color: #f5d77a;
   box-shadow: none;
 }
+
 .btn.ghost:hover {
-  background: rgba(201,162,39,0.1);
+  background: rgba(201, 162, 39, 0.12);
 }
 
-/* === FOOTER === */
-.footer {
-  text-align: center;
-  color: #d6c6a8;
-  font-size: 0.85em;
-  padding: 1.2em;
-  margin-top: 2em;
-  border-top: 1px solid rgba(201,162,39,0.3);
+.btn.gold {
+  background: linear-gradient(90deg, #c9a227, #e2c45d);
+  color: #4a0909;
+  font-weight: 800;
+  border-radius: 8px 20px 8px 20px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
 }
 
-/* === RECETTES === */
-.recette-card {
+.btn.gold:hover {
+  background: linear-gradient(90deg, #e2c45d, #c9a227);
+}
+
+.btn.small {
+  font-size: 0.82em;
+  padding: 0.35em 0.7em;
+}
+
+.btn.large {
+  font-size: 1.1em;
+  padding: 0.8em 1.8em;
+}
+
+/* ============================================================
+   TOGGLE DASHBOARD
+   ============================================================ */
+
+.toggle-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 0.8rem;
+  margin-bottom: 0.8rem;
+  font-weight: 700;
+  color: #ffefc1;
+  gap: 10px;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 26px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
   cursor: pointer;
-  transition: all 0.25s ease;
-  border: 1px solid rgba(201,162,39,0.2);
-}
-.recette-card:hover {
-  background: rgba(201,162,39,0.1);
-  transform: translateY(-2px);
-}
-.recette-detail {
-  margin-top: 8px;
-  padding: 8px 12px;
-  border-top: 1px solid rgba(255,255,255,0.1);
-  animation: fadeIn 0.25s ease;
-}
-.recette-detail table.mini th,
-.recette-detail table.mini td {
-  padding: 4px 6px;
-  font-size: 0.9em;
-  color: #fff8e7;
+  inset: 0;
+  background-color: #7a6a4f;
+  transition: 0.4s;
+  border-radius: 26px;
 }
 
-/* === INVENTAIRE === */
-#invTable input {
-  width: 100%;
-  padding: 4px;
-  font-size: 0.9em;
-  background: rgba(255,255,255,0.08);
-  color: #fff8e7;
-  border: 1px solid rgba(201,162,39,0.3);
-}
-#invTable td, #invTable th { text-align: left; }
-.btn.small { font-size: 0.8em; padding: 4px 8px; }
-
-/* === ANIMATIONS === */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-5px); }
-  to { opacity: 1; transform: translateY(0); }
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
 }
 
-/* === RESPONSIVE === */
-@media (max-width: 600px) {
-  .brand-title { font-size: 1em; }
-  .brand-sub { display: none; }
-  .card { padding: 0.8em; }
-  table.list th, table.list td { padding: 0.4em; }
+input:checked + .slider {
+  background-color: #c9a227;
 }
-/* === INVENTAIRE MENSUEL STRUCTURÉ === */
-.invm-header, .invm-body, .invm-footer {
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(201,162,39,0.25);
-  border-radius: 14px;
+
+input:checked + .slider:before {
+  transform: translateX(24px);
+}
+
+/* ============================================================
+   INVENTAIRE MENSUEL CLASSIQUE
+   ============================================================ */
+
+.invm-header,
+.invm-body,
+.invm-footer {
+  background: rgba(255, 255, 255, 0.075);
+  border: 1px solid rgba(201, 162, 39, 0.26);
+  border-radius: 16px;
   padding: 1em 1.2em;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.32);
 }
 
 .invm-header-grid {
@@ -316,59 +555,319 @@ table.list tbody tr:hover { background: rgba(255,255,255,0.08); }
   align-items: flex-end;
 }
 
-.card-subtitle {
-  font-weight: 600;
-  color: #ffefc1;
-  margin-bottom: 0.6em;
-}
-
 #invTable {
-  background: rgba(0,0,0,0.25);
-  border-radius: 10px;
-  border: 1px solid rgba(201,162,39,0.3);
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 12px;
+  border: 1px solid rgba(201, 162, 39, 0.28);
   width: 100%;
 }
 
 #invTable th {
-  background: rgba(201,162,39,0.15);
+  background: rgba(201, 162, 39, 0.16);
   color: #ffefc1;
 }
+
 #invTable td {
   color: #fff8e7;
-  border-bottom: 1px solid rgba(201,162,39,0.2);
+  border-bottom: 1px solid rgba(201, 162, 39, 0.2);
 }
 
 #invTable input {
   width: 100%;
-  padding: 6px;
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(201,162,39,0.3);
+  padding: 0.5em;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(201, 162, 39, 0.32);
   border-radius: 8px;
   color: #fff8e7;
 }
 
 #invTable input:focus {
   border-color: #c9a227;
-  box-shadow: 0 0 0 2px rgba(201,162,39,0.25);
-  background: rgba(201,162,39,0.1);
+  box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.25);
+  background: rgba(201, 162, 39, 0.1);
+  outline: none;
 }
 
-.row-actions.center {
-  justify-content: center;
+/* ============================================================
+   INVENTAIRE INTELLIGENT
+   ============================================================ */
+
+.invm-smart {
+  border: 1px solid rgba(201, 162, 39, 0.42);
+  background:
+    radial-gradient(circle at top right, rgba(201, 162, 39, 0.16), transparent 32%),
+    rgba(255, 255, 255, 0.075);
 }
 
-.btn.gold {
-  background: linear-gradient(90deg, #c9a227, #e2c45d);
-  color: #4a0909;
-  font-weight: 700;
-  border-radius: 8px 20px 8px 20px;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.4);
-}
-.btn.gold:hover {
-  background: linear-gradient(90deg, #e2c45d, #c9a227);
+.invm-smart .card-title {
+  color: #ffefc1;
+  font-weight: 800;
 }
 
-.btn.large {
-  font-size: 1.1em;
-  padding: 0.8em 1.8em;
+.invm-smart textarea {
+  width: 100%;
+  min-height: 160px;
+  resize: vertical;
+  box-sizing: border-box;
+  border-radius: 12px;
+  padding: 0.75rem;
+  font-family: inherit;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff8e7;
+  border: 1px solid rgba(201, 162, 39, 0.42);
+}
+
+.invm-smart textarea:focus {
+  outline: none;
+  border-color: #c9a227;
+  box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.3);
+}
+
+#smartSuggestions {
+  display: grid;
+  gap: 0.48rem;
+}
+
+.smart-choice {
+  border: 1px solid rgba(201, 162, 39, 0.3) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  transition: 0.2s ease;
+  color: #fff8e7 !important;
+}
+
+.smart-choice:hover {
+  border-color: #c9a227 !important;
+  background: rgba(201, 162, 39, 0.14) !important;
+}
+
+.smart-choice.active {
+  border: 2px solid #c9a227 !important;
+  background: rgba(201, 162, 39, 0.25) !important;
+  box-shadow: 0 4px 14px rgba(201, 162, 39, 0.22);
+}
+
+.smart-choice strong {
+  color: #ffefc1;
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.smart-choice .muted {
+  color: #e4d0a4;
+}
+
+#smartStatus {
+  padding: 0.7rem 0.85rem;
+  border-radius: 12px;
+  background: rgba(201, 162, 39, 0.12);
+  color: #ffefc1;
+  min-height: 1.2rem;
+  border: 1px solid rgba(201, 162, 39, 0.22);
+}
+
+/* ============================================================
+   RECETTES
+   ============================================================ */
+
+.recette-card {
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: 1px solid rgba(201, 162, 39, 0.22);
+}
+
+.recette-card:hover {
+  background: rgba(201, 162, 39, 0.1);
+  transform: translateY(-2px);
+}
+
+.recette-card.open {
+  border-color: rgba(201, 162, 39, 0.5);
+  background: rgba(201, 162, 39, 0.08);
+}
+
+.recette-detail {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  animation: fadeIn 0.25s ease;
+}
+
+.recette-detail table.mini th,
+.recette-detail table.mini td {
+  padding: 0.45em 0.55em;
+  font-size: 0.9em;
+  color: #fff8e7;
+}
+
+.factor-input {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff8e7;
+  border: 1px solid rgba(201, 162, 39, 0.35);
+  border-radius: 8px;
+  padding: 0.45em;
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+
+.footer {
+  text-align: center;
+  color: #d6c6a8;
+  font-size: 0.85em;
+  padding: 1.2em;
+  margin-top: 2em;
+  border-top: 1px solid rgba(201, 162, 39, 0.3);
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================
+   RESPONSIVE TABLETTE
+   ============================================================ */
+
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .actions {
+    width: 100%;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: space-between;
+  }
+
+  .actions .btn {
+    flex: 1;
+  }
+
+  .grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .input-field {
+    width: 100%;
+  }
+
+  .input-field input,
+  .input-field select,
+  .input-field textarea {
+    width: 100%;
+    font-size: 1rem;
+    padding: 0.7rem;
+  }
+
+  .row-actions {
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .btn {
+    width: 100%;
+    border-radius: 10px;
+  }
+
+  .tabs {
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .tab {
+    flex: 0 0 auto;
+  }
+
+  table.list {
+    font-size: 0.86em;
+  }
+
+  table.list th,
+  table.list td {
+    padding: 0.45em;
+  }
+
+  .invm-header-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE MOBILE
+   ============================================================ */
+
+@media (max-width: 600px) {
+  .container {
+    padding: 0.75em;
+  }
+
+  .brand-title {
+    font-size: 1em;
+  }
+
+  .brand-sub {
+    display: none;
+  }
+
+  .brand-badge {
+    width: 34px;
+    height: 34px;
+  }
+
+  .card {
+    padding: 0.85em;
+    border-radius: 14px;
+  }
+
+  .kpi-value {
+    font-size: 1.55em;
+  }
+
+  table.list {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  #invTable input {
+    min-width: 110px;
+  }
+
+  #smartSuggestions {
+    gap: 0.6rem;
+  }
+
+  .smart-choice {
+    padding: 0.75rem;
+  }
+
+  .footer {
+    font-size: 0.78em;
+  }
 }
