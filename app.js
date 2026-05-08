@@ -1,31 +1,33 @@
 // ============================================================
-// 🍷 Fouquet’s Joy — Gold Motion v17.6
-// Frontend double backend + double sécurité anti-perte
+// 🍷 Fouquet’s Joy — Gold Motion v17.7
+// Frontend multi-classeurs + double sécurité anti-perte
 //
 // Objectif :
 // 1) L’inventaire intelligent remplit le SAS / PDF Axel.
 // 2) L’inventaire classique de l’application est aussi rempli.
-// 3) Si le backend v17.5 écrit déjà dans les deux, le JS ne double pas.
+// 3) Si le backend v17.7 écrit déjà dans les deux, le JS ne double pas.
 // 4) Si une écriture échoue, la saisie est gardée en secours local.
+// 5) Les appellations/postes d’inventaire viennent du backend inventaire.
+// 6) Le mois est toujours initialisé au mois courant AAAA-MM.
 // ============================================================
 
 
 // ============================================================
-// CONFIG — À REMPLACER SI BESOIN
+// CONFIG
 // ============================================================
 
-// Backend principal de l'application Fouquet’s Joy
+// Backend principal de l'application Fouquet’s Joy.
 const APP_API_URL = "https://script.google.com/macros/s/AKfycbxqh8yvag7cBGZ34zza181fpWV2TssYeQIIqUEd5ZI91knMY5jSK6sUP0QDEULfh12a/exec";
 
-// Backend inventaire intelligent / SAS Axel
-const INV_API_URL = "https://script.google.com/macros/s/AKfycbwQMccxowdrQ4bP0-tw1Blx1HHFH_cQHRYqO0sSQP6nEmppH6Ma4qPQ4hKiCyBu_XDahQ/exec";
+// Backend inventaire intelligent / SAS Axel.
+const INV_API_URL = "https://script.google.com/macros/s/AKfycbw8-gqJTf7EieGAOL9lwNcOhslZvEtbOHtunj0gD89_p91OnBjifhEs-gKFeDkhide3Qg/exec";
 
-// IMPORTANT :
-// Si ton Code.gs v17.5 multi-classeurs est dans UN SEUL Apps Script,
-// mets la MÊME URL dans APP_API_URL et INV_API_URL.
-// Sinon, garde deux URLs différentes.
+// Si ton Code.gs v17.7 multi-classeurs gère TOUT dans un seul Apps Script,
+// mets la même URL dans APP_API_URL et INV_API_URL.
+// C’est le mode conseillé : moins de tuyauterie, moins de fuite, moins de plomberie sous pression.
+const PREFER_INVENTORY_POSTES = true;
 
-// Actions qui partent vers le backend inventaire intelligent.
+// Actions qui doivent partir vers le backend inventaire.
 const INVENTORY_ACTIONS = new Set([
   "inventorySmartInit",
   "inventorySmartSearch",
@@ -35,6 +37,37 @@ const INVENTORY_ACTIONS = new Set([
   "setupMultiClasseurs",
   "diagnosticMultiClasseurs"
 ]);
+
+// Actions applicatives classiques.
+const APP_ACTIONS = new Set([
+  "ping",
+  "getEtatStock",
+  "getStockDetail",
+  "getPertesPoids",
+  "getPertesParProduit",
+  "pertesAdd",
+  "getProduitsEtUnites",
+  "inventaireJournalier",
+  "zonesList",
+  "createInventaireMensuel",
+  "saveInventaireMensuelBatch",
+  "getRecettes",
+  "getRecette"
+]);
+
+const FALLBACK_POSTES = [
+  "Petit déjeuner",
+  "Garde-manger",
+  "Entremets",
+  "Poisson",
+  "Viande",
+  "Surgelés",
+  "Économat",
+  "Pâtisserie",
+  "Boulangerie",
+  "Production cuisine",
+  "A_RECLASSER"
+];
 
 
 // ============================================================
@@ -60,14 +93,53 @@ function serialize(params) {
   return u.toString();
 }
 
-function getApiUrlForAction(action) {
-  return INVENTORY_ACTIONS.has(action) ? INV_API_URL : APP_API_URL;
+function cleanApiUrl(url) {
+  return String(url || "").trim();
+}
+
+function getPrimaryApiUrlForAction(action) {
+  if (INVENTORY_ACTIONS.has(action)) return cleanApiUrl(INV_API_URL);
+  return cleanApiUrl(APP_API_URL);
+}
+
+function getFallbackApiUrlForAction(action) {
+  const appUrl = cleanApiUrl(APP_API_URL);
+  const invUrl = cleanApiUrl(INV_API_URL);
+
+  if (!appUrl || !invUrl || appUrl === invUrl) return "";
+
+  if (INVENTORY_ACTIONS.has(action)) return appUrl;
+  if (APP_ACTIONS.has(action)) return invUrl;
+
+  return "";
+}
+
+async function fetchJson(url, options = {}) {
+  const r = await fetch(url, {
+    cache: "no-store",
+    ...options
+  });
+
+  if (!r.ok) throw new Error("HTTP " + r.status);
+
+  const text = await r.text();
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return {
+      status: "error",
+      ok: false,
+      message: "Réponse API non JSON.",
+      raw: text
+    };
+  }
 }
 
 async function api(action, params = {}) {
-  const baseUrl = getApiUrlForAction(action);
+  const primaryUrl = getPrimaryApiUrlForAction(action);
 
-  if (!baseUrl || baseUrl.includes("COLLE_ICI")) {
+  if (!primaryUrl || primaryUrl.includes("COLLE_ICI")) {
     return {
       status: "error",
       ok: false,
@@ -75,29 +147,38 @@ async function api(action, params = {}) {
     };
   }
 
-  const url = `${baseUrl}?${serialize({ action, ...params })}`;
+  const url = `${primaryUrl}?${serialize({ action, ...params })}`;
 
   try {
-    const r = await fetch(url, {
-      method: "GET",
-      cache: "no-store"
-    });
+    const res = await fetchJson(url, { method: "GET" });
 
-    if (!r.ok) throw new Error("HTTP " + r.status);
+    if (isOk(res) || res.status === "NEED_CHOICE") return res;
 
-    const text = await r.text();
+    const fallbackUrl = getFallbackApiUrlForAction(action);
 
-    try {
-      return JSON.parse(text);
-    } catch {
-      return {
-        status: "error",
-        ok: false,
-        message: "Réponse API non JSON.",
-        raw: text
-      };
-    }
+    if (!fallbackUrl) return res;
+
+    const fallback = await fetchJson(`${fallbackUrl}?${serialize({ action, ...params })}`, { method: "GET" });
+    fallback.__fallbackUsed = true;
+    return fallback;
   } catch (e) {
+    const fallbackUrl = getFallbackApiUrlForAction(action);
+
+    if (fallbackUrl) {
+      try {
+        const fallback = await fetchJson(`${fallbackUrl}?${serialize({ action, ...params })}`, { method: "GET" });
+        fallback.__fallbackUsed = true;
+        return fallback;
+      } catch (e2) {
+        return {
+          status: "error",
+          ok: false,
+          message: e2.message || String(e2),
+          firstError: e.message || String(e)
+        };
+      }
+    }
+
     console.error("Erreur API", action, e);
 
     return {
@@ -109,9 +190,9 @@ async function api(action, params = {}) {
 }
 
 async function apiPost(action, body = {}) {
-  const baseUrl = getApiUrlForAction(action);
+  const primaryUrl = getPrimaryApiUrlForAction(action);
 
-  if (!baseUrl || baseUrl.includes("COLLE_ICI")) {
+  if (!primaryUrl || primaryUrl.includes("COLLE_ICI")) {
     return {
       status: "error",
       ok: false,
@@ -119,28 +200,41 @@ async function apiPost(action, body = {}) {
     };
   }
 
+  const postOptions = {
+    method: "POST",
+    body: JSON.stringify({ action, ...body })
+  };
+
   try {
-    const r = await fetch(`${baseUrl}?action=${encodeURIComponent(action)}`, {
-      method: "POST",
-      cache: "no-store",
-      body: JSON.stringify({ action, ...body })
-    });
+    const res = await fetchJson(`${primaryUrl}?action=${encodeURIComponent(action)}`, postOptions);
 
-    if (!r.ok) throw new Error("HTTP " + r.status);
+    if (isOk(res) || res.status === "NEED_CHOICE") return res;
 
-    const text = await r.text();
+    const fallbackUrl = getFallbackApiUrlForAction(action);
 
-    try {
-      return JSON.parse(text);
-    } catch {
-      return {
-        status: "error",
-        ok: false,
-        message: "Réponse API non JSON.",
-        raw: text
-      };
-    }
+    if (!fallbackUrl) return res;
+
+    const fallback = await fetchJson(`${fallbackUrl}?action=${encodeURIComponent(action)}`, postOptions);
+    fallback.__fallbackUsed = true;
+    return fallback;
   } catch (e) {
+    const fallbackUrl = getFallbackApiUrlForAction(action);
+
+    if (fallbackUrl) {
+      try {
+        const fallback = await fetchJson(`${fallbackUrl}?action=${encodeURIComponent(action)}`, postOptions);
+        fallback.__fallbackUsed = true;
+        return fallback;
+      } catch (e2) {
+        return {
+          status: "error",
+          ok: false,
+          message: e2.message || String(e2),
+          firstError: e.message || String(e)
+        };
+      }
+    }
+
     console.error("Erreur API POST", action, e);
 
     return {
@@ -161,12 +255,13 @@ function setBadge(state) {
 
   b.textContent =
     state === "online" ? "En ligne" :
+    state === "partial" ? "Partiel" :
     state === "error" ? "Erreur" :
     "Hors ligne";
 
   b.classList.toggle("offline", state !== "online");
   b.classList.toggle("online", state === "online");
-  b.classList.toggle("error", state === "error");
+  b.classList.toggle("error", state === "error" || state === "partial");
 }
 
 const toNum = v => {
@@ -189,6 +284,11 @@ function currentMonth() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function normalizeMonth(value) {
+  const v = String(value || "").trim().replaceAll("/", "-").replaceAll(".", "-");
+  return /^\d{4}-\d{2}$/.test(v) ? v : currentMonth();
+}
+
 function debounce(fn, delay = 300) {
   let timer;
 
@@ -198,18 +298,34 @@ function debounce(fn, delay = 300) {
   };
 }
 
+function uniqueArray(values) {
+  return [...new Set((values || []).map(v => String(v || "").trim()).filter(Boolean))];
+}
+
 
 // ============================================================
 // SECOURS LOCAL INVENTAIRE — ANTI-PERTE
 // ============================================================
 
-const INVENTORY_RESCUE_KEY = "fouquets_joy_inventory_rescue_v176";
+const INVENTORY_RESCUE_KEY = "fouquets_joy_inventory_rescue_v177";
+const OLD_RESCUE_KEYS = [
+  "fouquets_joy_inventory_rescue_v176"
+];
 
 function readInventoryRescueQueue() {
   try {
     const raw = localStorage.getItem(INVENTORY_RESCUE_KEY);
     const data = JSON.parse(raw || "[]");
-    return Array.isArray(data) ? data : [];
+
+    if (Array.isArray(data) && data.length) return data;
+
+    for (const oldKey of OLD_RESCUE_KEYS) {
+      const oldRaw = localStorage.getItem(oldKey);
+      const oldData = JSON.parse(oldRaw || "[]");
+      if (Array.isArray(oldData) && oldData.length) return oldData;
+    }
+
+    return [];
   } catch {
     return [];
   }
@@ -313,13 +429,17 @@ async function retryInventoryRescueQueue() {
 
       if (p.type === "SMART_FAILED") {
         res = await api("inventorySmartSubmit", {
-          mois: p.mois,
-          poste: p.poste,
+          mois: normalizeMonth(p.mois),
+          poste: p.poste || "A_RECLASSER",
           articleTerrain: p.articleTerrain,
           qte: p.qte,
           unite: p.unite,
           cle: p.cle || ""
         });
+
+        if (isOk(res)) {
+          await classicFallbackAfterSmart(res, p);
+        }
       } else {
         res = await saveClassicInventoryBatch([
           {
@@ -377,15 +497,20 @@ async function checkConnection() {
 
   if (isOk(app) && isOk(inv)) {
     setBadge("online");
+  } else if (isOk(app) || isOk(inv)) {
+    setBadge("partial");
+    console.warn("Connexion partielle", { app, inv });
   } else {
     setBadge("error");
-    console.warn("Connexion partielle", { app, inv });
+    console.warn("Connexion impossible", { app, inv });
   }
 }
 
 async function render(view) {
   const tpl = qs(`#tpl-${view}`);
   const app = qs("#app");
+
+  if (!app) return;
 
   app.innerHTML = tpl
     ? tpl.innerHTML
@@ -412,7 +537,9 @@ async function mountDashboard() {
 
     if (isOk(etat) && qs("#kpiStock")) {
       qs("#kpiStock").textContent = `€ ${(etat.valeurTotale || 0).toLocaleString("fr-FR")}`;
-      qs("#kpiStockQte").textContent = `${(etat.quantiteTotale || 0).toLocaleString("fr-FR")} unités`;
+      if (qs("#kpiStockQte")) {
+        qs("#kpiStockQte").textContent = `${(etat.quantiteTotale || 0).toLocaleString("fr-FR")} unités`;
+      }
     }
   } catch (e) {
     console.warn("Etat stock", e);
@@ -766,38 +893,41 @@ async function handleInvJ(type) {
 // INVENTAIRE MENSUEL
 // ============================================================
 
+async function getInventoryPostes() {
+  let zones = [];
+
+  if (PREFER_INVENTORY_POSTES) {
+    try {
+      const init = await api("inventorySmartInit");
+      if (isOk(init)) zones = zones.concat(init.postes || []);
+    } catch (e) {
+      console.warn("Postes inventaire non chargés", e);
+    }
+  }
+
+  try {
+    const z = await api("zonesList");
+    if (isOk(z)) zones = zones.concat(z.zones || []);
+  } catch (e) {
+    console.warn("Zones application non chargées", e);
+  }
+
+  zones = uniqueArray(zones);
+
+  if (!zones.length) zones = FALLBACK_POSTES.slice();
+
+  return zones;
+}
+
 async function mountInvM() {
   const zoneSelect = qs("#invmZone");
   const moisInput = qs("#invmMois");
 
   if (!zoneSelect || !moisInput) return;
 
-  moisInput.value = currentMonth();
+  moisInput.value = normalizeMonth(moisInput.value || currentMonth());
 
-  let zones = [];
-
-  try {
-    const z = await api("zonesList");
-    zones = isOk(z) ? (z.zones || []) : [];
-  } catch {
-    zones = [];
-  }
-
-  if (!zones.length) {
-    zones = [
-      "Petit déjeuner",
-      "Garde-manger",
-      "Entremets",
-      "Poisson",
-      "Viande",
-      "Surgelés",
-      "Économat",
-      "Pâtisserie",
-      "Boulangerie",
-      "Production cuisine",
-      "A_RECLASSER"
-    ];
-  }
+  const zones = await getInventoryPostes();
 
   zoneSelect.innerHTML = zones
     .map(z => `<option value="${escapeHtml(z)}">${escapeHtml(z)}</option>`)
@@ -851,7 +981,7 @@ async function mountInvM() {
     btnGenSheet.addEventListener("click", async () => {
       const res = await api("createInventaireMensuel", {
         zone: zoneSelect.value,
-        mois: moisInput.value
+        mois: normalizeMonth(moisInput.value)
       });
 
       alert(isOk(res) ? "✅ Feuille générée" : "❌ " + (res.message || "Erreur"));
@@ -904,7 +1034,7 @@ async function mountInvM() {
 async function saveClassicInventoryBatch(lignes) {
   return await apiPost("saveInventaireMensuelBatch", {
     zone: qs("#invmZone")?.value || "Général",
-    mois: qs("#invmMois")?.value || currentMonth(),
+    mois: normalizeMonth(qs("#invmMois")?.value || currentMonth()),
     lignes
   });
 }
@@ -974,7 +1104,7 @@ function mountInventorySmart() {
     const qte = qteInput?.value || "";
     const unite = uniteInput?.value.trim() || "";
     const poste = qs("#invmZone")?.value || "A_RECLASSER";
-    const mois = qs("#invmMois")?.value || currentMonth();
+    const mois = normalizeMonth(qs("#invmMois")?.value || currentMonth());
 
     if (!articleTerrain || !qte) {
       alert("Article + quantité obligatoires.");
@@ -1061,7 +1191,7 @@ function mountInventorySmart() {
       }
 
       const rows = parseSmartBulkText(raw, {
-        mois: qs("#invmMois")?.value || currentMonth(),
+        mois: normalizeMonth(qs("#invmMois")?.value || currentMonth()),
         poste: qs("#invmZone")?.value || "A_RECLASSER"
       });
 
@@ -1073,7 +1203,7 @@ function mountInventorySmart() {
       setSmartStatus(`⏳ Import intelligent de ${rows.length} ligne(s)...`, "loading");
 
       const smartRes = await apiPost("inventorySmartBulkImport", {
-        mois: qs("#invmMois")?.value || currentMonth(),
+        mois: normalizeMonth(qs("#invmMois")?.value || currentMonth()),
         poste: qs("#invmZone")?.value || "A_RECLASSER",
         rows
       });
@@ -1129,7 +1259,7 @@ function mountInventorySmart() {
                 qte: r.qte,
                 unite: r.unite,
                 poste: qs("#invmZone")?.value || "",
-                mois: qs("#invmMois")?.value || ""
+                mois: normalizeMonth(qs("#invmMois")?.value || currentMonth())
               },
               classicRes.message || "Échec inventaire classique après import"
             );
@@ -1195,7 +1325,7 @@ function parseSmartBulkText(raw, defaults = {}) {
           qte: tabParts[1],
           unite: tabParts[2],
           poste: tabParts[3] || defaults.poste || "",
-          mois: tabParts[4] || defaults.mois || ""
+          mois: normalizeMonth(tabParts[4] || defaults.mois || currentMonth())
         };
       }
 
@@ -1207,7 +1337,7 @@ function parseSmartBulkText(raw, defaults = {}) {
           qte: match[2],
           unite: match[3] || "",
           poste: defaults.poste || "",
-          mois: defaults.mois || ""
+          mois: normalizeMonth(defaults.mois || currentMonth())
         };
       }
 
@@ -1216,7 +1346,7 @@ function parseSmartBulkText(raw, defaults = {}) {
         qte: "",
         unite: "",
         poste: defaults.poste || "",
-        mois: defaults.mois || ""
+        mois: normalizeMonth(defaults.mois || currentMonth())
       };
     })
     .filter(x => x.articleTerrain && x.qte);
