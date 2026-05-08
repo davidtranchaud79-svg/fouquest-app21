@@ -1,21 +1,29 @@
 // ============================================================
-// 🍷 Fouquet’s Joy — Gold Motion v17.5
-// Frontend double backend : application + inventaire intelligent
-// Les deux inventaires se remplissent en même temps.
+// 🍷 Fouquet’s Joy — Gold Motion v17.6
+// Frontend double backend + double sécurité anti-perte
+//
+// Objectif :
+// 1) L’inventaire intelligent remplit le SAS / PDF Axel.
+// 2) L’inventaire classique de l’application est aussi rempli.
+// 3) Si le backend v17.5 écrit déjà dans les deux, le JS ne double pas.
+// 4) Si une écriture échoue, la saisie est gardée en secours local.
 // ============================================================
 
+
 // ============================================================
-// CONFIG — À REMPLACER
+// CONFIG — À REMPLACER SI BESOIN
 // ============================================================
 
 // Backend principal de l'application Fouquet’s Joy
 const APP_API_URL = "https://script.google.com/macros/s/AKfycbxqh8yvag7cBGZ34zza181fpWV2TssYeQIIqUEd5ZI91knMY5jSK6sUP0QDEULfh12a/exec";
 
 // Backend inventaire intelligent / SAS Axel
-const INV_API_URL = "https://script.google.com/macros/s/AKfycbxFB1qj5eR2ITN2tlJtnZc4lQuAtmmPjUQsrLNG6f54W1eLgIkHnu91mYEfCYmoeK-FhA/exec";
+const INV_API_URL = "https://script.google.com/macros/s/AKfycbwQMccxowdrQ4bP0-tw1Blx1HHFH_cQHRYqO0sSQP6nEmppH6Ma4qPQ4hKiCyBu_XDahQ/exec";
 
-// Si tu utilises le Code.gs v17.4 multi-classeurs dans un seul Apps Script,
-// mets la même URL dans les deux lignes ci-dessus.
+// IMPORTANT :
+// Si ton Code.gs v17.5 multi-classeurs est dans UN SEUL Apps Script,
+// mets la MÊME URL dans APP_API_URL et INV_API_URL.
+// Sinon, garde deux URLs différentes.
 
 // Actions qui partent vers le backend inventaire intelligent.
 const INVENTORY_ACTIONS = new Set([
@@ -24,8 +32,10 @@ const INVENTORY_ACTIONS = new Set([
   "inventorySmartSubmit",
   "inventorySmartBulkImport",
   "inventorySmartApplyValidation",
-  "setupMultiClasseurs"
+  "setupMultiClasseurs",
+  "diagnosticMultiClasseurs"
 ]);
+
 
 // ============================================================
 // HELPERS GÉNÉRAUX
@@ -40,6 +50,8 @@ function serialize(params) {
   Object.entries(params || {}).forEach(([k, v]) => {
     if (v === undefined || v === null) {
       u.append(k, "");
+    } else if (typeof v === "object") {
+      u.append(k, JSON.stringify(v));
     } else {
       u.append(k, String(v));
     }
@@ -73,7 +85,18 @@ async function api(action, params = {}) {
 
     if (!r.ok) throw new Error("HTTP " + r.status);
 
-    return await r.json();
+    const text = await r.text();
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      return {
+        status: "error",
+        ok: false,
+        message: "Réponse API non JSON.",
+        raw: text
+      };
+    }
   } catch (e) {
     console.error("Erreur API", action, e);
 
@@ -100,12 +123,23 @@ async function apiPost(action, body = {}) {
     const r = await fetch(`${baseUrl}?action=${encodeURIComponent(action)}`, {
       method: "POST",
       cache: "no-store",
-      body: JSON.stringify(body)
+      body: JSON.stringify({ action, ...body })
     });
 
     if (!r.ok) throw new Error("HTTP " + r.status);
 
-    return await r.json();
+    const text = await r.text();
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      return {
+        status: "error",
+        ok: false,
+        message: "Réponse API non JSON.",
+        raw: text
+      };
+    }
   } catch (e) {
     console.error("Erreur API POST", action, e);
 
@@ -125,7 +159,11 @@ function setBadge(state) {
   const b = qs("#syncBadge");
   if (!b) return;
 
-  b.textContent = state === "online" ? "En ligne" : state === "error" ? "Erreur" : "Hors ligne";
+  b.textContent =
+    state === "online" ? "En ligne" :
+    state === "error" ? "Erreur" :
+    "Hors ligne";
+
   b.classList.toggle("offline", state !== "online");
   b.classList.toggle("online", state === "online");
   b.classList.toggle("error", state === "error");
@@ -160,6 +198,158 @@ function debounce(fn, delay = 300) {
   };
 }
 
+
+// ============================================================
+// SECOURS LOCAL INVENTAIRE — ANTI-PERTE
+// ============================================================
+
+const INVENTORY_RESCUE_KEY = "fouquets_joy_inventory_rescue_v176";
+
+function readInventoryRescueQueue() {
+  try {
+    const raw = localStorage.getItem(INVENTORY_RESCUE_KEY);
+    const data = JSON.parse(raw || "[]");
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeInventoryRescueQueue(rows) {
+  localStorage.setItem(INVENTORY_RESCUE_KEY, JSON.stringify(rows || []));
+}
+
+function addInventoryRescue(payload, reason = "") {
+  const queue = readInventoryRescueQueue();
+
+  queue.push({
+    date: new Date().toISOString(),
+    reason,
+    payload
+  });
+
+  writeInventoryRescueQueue(queue);
+  updateRescueCounter();
+}
+
+function updateRescueCounter() {
+  const count = readInventoryRescueQueue().length;
+
+  const el = qs("#rescueCount");
+  if (el) el.textContent = String(count);
+
+  const btn = qs("#btnRescueRetry");
+  if (btn) btn.disabled = count === 0;
+}
+
+async function classicFallbackAfterSmart(smartRes, originalPayload) {
+  const backendSaysClassicDone =
+    smartRes &&
+    smartRes.doubleWrite &&
+    smartRes.doubleWrite.inventaireClassiqueApp === true;
+
+  if (backendSaysClassicDone) {
+    return {
+      status: "success",
+      ok: true,
+      message: "Inventaire classique déjà rempli par le backend."
+    };
+  }
+
+  const articleFinal =
+    smartRes?.item?.article ||
+    smartRes?.item?.produit ||
+    originalPayload.articleTerrain;
+
+  const uniteFinal =
+    smartRes?.item?.unite ||
+    originalPayload.unite ||
+    "";
+
+  const classicRes = await saveClassicInventoryBatch([
+    {
+      produit: articleFinal,
+      qte: originalPayload.qte,
+      unite: uniteFinal,
+      comment: `Secours inventaire intelligent — terrain : ${originalPayload.articleTerrain}`
+    }
+  ]);
+
+  if (!isOk(classicRes)) {
+    addInventoryRescue(
+      {
+        type: "CLASSIC_FALLBACK_FAILED",
+        articleTerrain: originalPayload.articleTerrain,
+        articleFinal,
+        qte: originalPayload.qte,
+        unite: uniteFinal,
+        poste: originalPayload.poste,
+        mois: originalPayload.mois
+      },
+      classicRes.message || "Échec écriture inventaire classique"
+    );
+  }
+
+  return classicRes;
+}
+
+async function retryInventoryRescueQueue() {
+  const queue = readInventoryRescueQueue();
+
+  if (!queue.length) {
+    alert("Aucune saisie en secours.");
+    return;
+  }
+
+  let ok = 0;
+  let fail = 0;
+  const remaining = [];
+
+  for (const item of queue) {
+    const p = item.payload || {};
+
+    try {
+      let res;
+
+      if (p.type === "SMART_FAILED") {
+        res = await api("inventorySmartSubmit", {
+          mois: p.mois,
+          poste: p.poste,
+          articleTerrain: p.articleTerrain,
+          qte: p.qte,
+          unite: p.unite,
+          cle: p.cle || ""
+        });
+      } else {
+        res = await saveClassicInventoryBatch([
+          {
+            produit: p.articleFinal || p.articleTerrain,
+            qte: p.qte,
+            unite: p.unite || "",
+            comment: `Reprise secours local — ${p.articleTerrain || ""}`
+          }
+        ]);
+      }
+
+      if (isOk(res)) {
+        ok++;
+      } else {
+        fail++;
+        remaining.push(item);
+      }
+    } catch {
+      fail++;
+      remaining.push(item);
+    }
+  }
+
+  writeInventoryRescueQueue(remaining);
+  updateRescueCounter();
+
+  alert(`Reprise secours terminée : ${ok} OK, ${fail} encore en erreur.`);
+}
+
+
 // ============================================================
 // NAVIGATION
 // ============================================================
@@ -175,6 +365,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const syncBtn = qs("#btnSync");
   if (syncBtn) syncBtn.addEventListener("click", checkConnection);
 
+  updateRescueCounter();
+
   render("dashboard");
   checkConnection();
 });
@@ -187,6 +379,7 @@ async function checkConnection() {
     setBadge("online");
   } else {
     setBadge("error");
+    console.warn("Connexion partielle", { app, inv });
   }
 }
 
@@ -204,7 +397,10 @@ async function render(view) {
   if (view === "invm") await mountInvM();
   if (view === "recettes") await mountRecettes();
   if (view === "settings") mountSettings();
+
+  updateRescueCounter();
 }
+
 
 // ============================================================
 // DASHBOARD
@@ -214,7 +410,7 @@ async function mountDashboard() {
   try {
     const etat = await api("getEtatStock");
 
-    if (isOk(etat)) {
+    if (isOk(etat) && qs("#kpiStock")) {
       qs("#kpiStock").textContent = `€ ${(etat.valeurTotale || 0).toLocaleString("fr-FR")}`;
       qs("#kpiStockQte").textContent = `${(etat.quantiteTotale || 0).toLocaleString("fr-FR")} unités`;
     }
@@ -225,7 +421,7 @@ async function mountDashboard() {
   try {
     const pertes = await api("getPertesPoids");
 
-    if (isOk(pertes)) {
+    if (isOk(pertes) && qs("#kpiPertes")) {
       qs("#kpiPertes").textContent = `${Number(pertes.pertesKg || 0).toFixed(2)} kg`;
     }
   } catch (e) {
@@ -258,7 +454,7 @@ async function mountDashboard() {
     console.warn("Stock detail", e);
   }
 
-  qs("#kpiSeuils").textContent = "0";
+  if (qs("#kpiSeuils")) qs("#kpiSeuils").textContent = "0";
 
   await mountPertesChart();
 }
@@ -349,9 +545,7 @@ async function mountPertesChart() {
           title: { display: true, text: "Pareto des pertes" }
         },
         scales: {
-          y: {
-            beginAtZero: true
-          },
+          y: { beginAtZero: true },
           y1: {
             beginAtZero: true,
             position: "right",
@@ -392,6 +586,7 @@ async function mountPertesChart() {
   }
 }
 
+
 // ============================================================
 // PRODUITS
 // ============================================================
@@ -412,6 +607,7 @@ async function preloadProduits(datalistId) {
   }
 }
 
+
 // ============================================================
 // PERTES
 // ============================================================
@@ -419,35 +615,49 @@ async function preloadProduits(datalistId) {
 async function mountPertes() {
   await preloadProduits("dlProduitsPertes");
 
-  qs("#btnSavePerte").addEventListener("click", async () => {
-    const payload = {
-      produit: qs("#pertesProduit").value.trim(),
-      qte: qs("#pertesQte").value,
-      unite: qs("#pertesUnite").value.trim(),
-      motif: qs("#pertesMotif").value.trim(),
-      comment: qs("#pertesComment").value.trim()
-    };
+  const btnSave = qs("#btnSavePerte");
+  const btnReset = qs("#btnResetPerte");
 
-    if (!payload.produit || !payload.qte) {
-      alert("Produit + quantité requis.");
-      return;
-    }
+  if (btnSave) {
+    btnSave.addEventListener("click", async () => {
+      const payload = {
+        produit: qs("#pertesProduit")?.value.trim() || "",
+        qte: qs("#pertesQte")?.value || "",
+        unite: qs("#pertesUnite")?.value.trim() || "",
+        motif: qs("#pertesMotif")?.value.trim() || "",
+        comment: qs("#pertesComment")?.value.trim() || ""
+      };
 
-    const res = await api("pertesAdd", payload);
+      if (!payload.produit || !payload.qte) {
+        alert("Produit + quantité requis.");
+        return;
+      }
 
-    alert(isOk(res) ? "✅ Perte enregistrée" : "❌ " + (res.message || "Erreur"));
+      const res = await api("pertesAdd", payload);
 
-    if (isOk(res)) {
+      alert(isOk(res) ? "✅ Perte enregistrée" : "❌ " + (res.message || "Erreur"));
+
+      if (isOk(res)) {
+        ["pertesProduit", "pertesQte", "pertesUnite", "pertesMotif", "pertesComment"]
+          .forEach(id => {
+            const el = qs("#" + id);
+            if (el) el.value = "";
+          });
+      }
+    });
+  }
+
+  if (btnReset) {
+    btnReset.addEventListener("click", () => {
       ["pertesProduit", "pertesQte", "pertesUnite", "pertesMotif", "pertesComment"]
-        .forEach(id => qs("#" + id).value = "");
-    }
-  });
-
-  qs("#btnResetPerte").addEventListener("click", () => {
-    ["pertesProduit", "pertesQte", "pertesUnite", "pertesMotif", "pertesComment"]
-      .forEach(id => qs("#" + id).value = "");
-  });
+        .forEach(id => {
+          const el = qs("#" + id);
+          if (el) el.value = "";
+        });
+    });
+  }
 }
+
 
 // ============================================================
 // INVENTAIRE JOURNALIER
@@ -474,7 +684,7 @@ async function mountInvJ() {
   const inputProduit = qs("#invjProduit");
   const inputUnite = qs("#invjUnite");
 
-  if (inputProduit) {
+  if (inputProduit && inputUnite) {
     inputProduit.addEventListener("input", () => {
       const val = inputProduit.value.trim().toLowerCase();
 
@@ -494,20 +704,32 @@ async function mountInvJ() {
     });
   }
 
-  qs("#btnInvJEntree").addEventListener("click", () => handleInvJ("entree"));
-  qs("#btnInvJSortie").addEventListener("click", () => handleInvJ("sortie"));
+  const btnEntree = qs("#btnInvJEntree");
+  const btnSortie = qs("#btnInvJSortie");
+  const btnReset = qs("#btnResetInvJ");
 
-  qs("#btnResetInvJ").addEventListener("click", () => {
-    ["invjProduit", "invjQte", "invjUnite"].forEach(id => qs("#" + id).value = "");
-    qs("#invjUnite").removeAttribute("readonly");
-    qs("#invjUnite").classList.remove("locked");
-  });
+  if (btnEntree) btnEntree.addEventListener("click", () => handleInvJ("entree"));
+  if (btnSortie) btnSortie.addEventListener("click", () => handleInvJ("sortie"));
+
+  if (btnReset) {
+    btnReset.addEventListener("click", () => {
+      ["invjProduit", "invjQte", "invjUnite"].forEach(id => {
+        const el = qs("#" + id);
+        if (el) el.value = "";
+      });
+
+      if (qs("#invjUnite")) {
+        qs("#invjUnite").removeAttribute("readonly");
+        qs("#invjUnite").classList.remove("locked");
+      }
+    });
+  }
 }
 
 async function handleInvJ(type) {
-  const produit = qs("#invjProduit").value.trim();
-  const qte = qs("#invjQte").value;
-  const unite = qs("#invjUnite").value.trim();
+  const produit = qs("#invjProduit")?.value.trim() || "";
+  const qte = qs("#invjQte")?.value || "";
+  const unite = qs("#invjUnite")?.value.trim() || "";
 
   if (!produit || !qte) {
     alert("Veuillez remplir le produit et la quantité.");
@@ -527,11 +749,18 @@ async function handleInvJ(type) {
   );
 
   if (isOk(res)) {
-    ["invjProduit", "invjQte", "invjUnite"].forEach(id => qs("#" + id).value = "");
-    qs("#invjUnite").removeAttribute("readonly");
-    qs("#invjUnite").classList.remove("locked");
+    ["invjProduit", "invjQte", "invjUnite"].forEach(id => {
+      const el = qs("#" + id);
+      if (el) el.value = "";
+    });
+
+    if (qs("#invjUnite")) {
+      qs("#invjUnite").removeAttribute("readonly");
+      qs("#invjUnite").classList.remove("locked");
+    }
   }
 }
+
 
 // ============================================================
 // INVENTAIRE MENSUEL
@@ -540,6 +769,8 @@ async function handleInvJ(type) {
 async function mountInvM() {
   const zoneSelect = qs("#invmZone");
   const moisInput = qs("#invmMois");
+
+  if (!zoneSelect || !moisInput) return;
 
   moisInput.value = currentMonth();
 
@@ -563,7 +794,8 @@ async function mountInvM() {
       "Économat",
       "Pâtisserie",
       "Boulangerie",
-      "Production cuisine"
+      "Production cuisine",
+      "A_RECLASSER"
     ];
   }
 
@@ -576,9 +808,11 @@ async function mountInvM() {
     const produits = isOk(d) ? (d.produits || []) : [];
     const dl = qs("#dlProduitsInvM");
 
-    dl.innerHTML = produits
-      .map(p => `<option value="${escapeHtml(p.produit || "")}">`)
-      .join("");
+    if (dl) {
+      dl.innerHTML = produits
+        .map(p => `<option value="${escapeHtml(p.produit || "")}">`)
+        .join("");
+    }
   } catch (e) {
     console.warn("Produits inventaire mensuel", e);
   }
@@ -586,6 +820,8 @@ async function mountInvM() {
   const tbody = qs("#invTable tbody");
 
   function addRow(p = "", q = "", u = "", c = "") {
+    if (!tbody) return;
+
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
@@ -600,70 +836,82 @@ async function mountInvM() {
     tbody.appendChild(tr);
   }
 
-  addRow();
+  if (tbody) {
+    tbody.innerHTML = "";
+    addRow();
+  }
 
-  qs("#btnAddRow").addEventListener("click", () => addRow());
+  const btnAddRow = qs("#btnAddRow");
+  const btnGenSheet = qs("#btnGenSheet");
+  const btnSaveInv = qs("#btnSaveInv");
 
-  qs("#btnGenSheet").addEventListener("click", async () => {
-    const res = await api("createInventaireMensuel", {
-      zone: zoneSelect.value,
-      mois: moisInput.value
+  if (btnAddRow) btnAddRow.addEventListener("click", () => addRow());
+
+  if (btnGenSheet) {
+    btnGenSheet.addEventListener("click", async () => {
+      const res = await api("createInventaireMensuel", {
+        zone: zoneSelect.value,
+        mois: moisInput.value
+      });
+
+      alert(isOk(res) ? "✅ Feuille générée" : "❌ " + (res.message || "Erreur"));
     });
+  }
 
-    alert(isOk(res) ? "✅ Feuille générée" : "❌ " + (res.message || "Erreur"));
-  });
+  if (btnSaveInv) {
+    btnSaveInv.addEventListener("click", async () => {
+      const lignes = [];
 
-  qs("#btnSaveInv").addEventListener("click", async () => {
-    const lignes = [];
+      qsa("#invTable tbody tr").forEach(tr => {
+        const inputs = qsa("input", tr);
+        const p = inputs[0]?.value.trim() || "";
+        const q = inputs[1]?.value || "";
+        const u = inputs[2]?.value.trim() || "";
+        const c = inputs[3]?.value.trim() || "";
 
-    qsa("#invTable tbody tr").forEach(tr => {
-      const inputs = qsa("input", tr);
-      const p = inputs[0].value.trim();
-      const q = inputs[1].value;
-      const u = inputs[2].value.trim();
-      const c = inputs[3].value.trim();
+        if (p && q) {
+          lignes.push({
+            produit: p,
+            qte: q,
+            unite: u,
+            comment: c
+          });
+        }
+      });
 
-      if (p && q) {
-        lignes.push({
-          produit: p,
-          qte: q,
-          unite: u,
-          comment: c
-        });
+      if (!lignes.length) {
+        alert("Aucune ligne saisie.");
+        return;
+      }
+
+      const res = await saveClassicInventoryBatch(lignes);
+
+      alert(isOk(res)
+        ? "✅ Inventaire classique enregistré"
+        : "❌ " + (res.message || "Erreur")
+      );
+
+      if (isOk(res) && tbody) {
+        tbody.innerHTML = "";
+        addRow();
       }
     });
-
-    if (!lignes.length) {
-      alert("Aucune ligne saisie.");
-      return;
-    }
-
-    const res = await saveClassicInventoryBatch(lignes);
-
-    alert(isOk(res)
-      ? "✅ Inventaire classique enregistré"
-      : "❌ " + (res.message || "Erreur")
-    );
-
-    if (isOk(res)) {
-      tbody.innerHTML = "";
-      addRow();
-    }
-  });
+  }
 
   mountInventorySmart();
 }
 
 async function saveClassicInventoryBatch(lignes) {
   return await apiPost("saveInventaireMensuelBatch", {
-    zone: qs("#invmZone").value,
-    mois: qs("#invmMois").value,
-    lignes: lignes
+    zone: qs("#invmZone")?.value || "Général",
+    mois: qs("#invmMois")?.value || currentMonth(),
+    lignes
   });
 }
 
+
 // ============================================================
-// INVENTAIRE INTELLIGENT — REMPLIT LES 2 INVENTAIRES
+// INVENTAIRE INTELLIGENT — DOUBLE SÉCURITÉ
 // ============================================================
 
 let smartSelectedCle = "";
@@ -699,7 +947,7 @@ function mountInventorySmart() {
 
     const res = await api("inventorySmartSearch", {
       q,
-      poste: qs("#invmZone").value,
+      poste: qs("#invmZone")?.value || "",
       limit: 8
     });
 
@@ -716,151 +964,196 @@ function mountInventorySmart() {
       return;
     }
 
-    suggestionsBox.innerHTML = items.map((it, index) => `
-      <button type="button" class="smart-choice" data-cle="${escapeHtml(it.cle)}">
-        <strong>${index + 1}. ${escapeHtml(it.article || it.produit || "")}</strong>
-        <span class="muted-dark">
-          ${escapeHtml(it.groupe || "")} • ${escapeHtml(it.unite || "")}
-          • ordre PDF ${escapeHtml(it.ordrePdf || "")}
-          • score ${escapeHtml(it.score || 0)}
-        </span>
-      </button>
-    `).join("");
-
-    qsa(".smart-choice", suggestionsBox).forEach(btn => {
-      btn.addEventListener("click", () => {
-        qsa(".smart-choice", suggestionsBox).forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        smartSelectedCle = btn.dataset.cle || "";
-        setSmartStatus("✅ Article Axel sélectionné. Tu peux enregistrer.", "ok");
-      });
-    });
+    renderSmartChoices(items);
   }
 
   articleInput.addEventListener("input", debounce(refreshSuggestions, 300));
 
   btnSave.addEventListener("click", async () => {
     const articleTerrain = articleInput.value.trim();
-    const qte = qteInput.value;
-    const unite = uniteInput.value.trim();
-    const poste = qs("#invmZone").value;
-    const mois = qs("#invmMois").value;
+    const qte = qteInput?.value || "";
+    const unite = uniteInput?.value.trim() || "";
+    const poste = qs("#invmZone")?.value || "A_RECLASSER";
+    const mois = qs("#invmMois")?.value || currentMonth();
 
     if (!articleTerrain || !qte) {
       alert("Article + quantité obligatoires.");
       return;
     }
 
-    setSmartStatus("⏳ Rangement intelligent en cours...", "loading");
-
-    const smartRes = await api("inventorySmartSubmit", {
+    const originalPayload = {
       mois,
       poste,
       articleTerrain,
       qte,
       unite,
       cle: smartSelectedCle
-    });
+    };
+
+    setSmartStatus("⏳ Rangement intelligent en cours...", "loading");
+
+    const smartRes = await api("inventorySmartSubmit", originalPayload);
 
     if (smartRes.status === "NEED_CHOICE") {
       renderSmartChoices(smartRes.suggestions || []);
-      setSmartStatus("⚠️ Plusieurs articles possibles. Sélectionne le bon puis reclique sur enregistrer.", "warning");
-      return;
-    }
-
-    if (!isOk(smartRes)) {
-      setSmartStatus("❌ SAS intelligent non rempli : " + (smartRes.message || "Erreur inconnue"), "error");
-      return;
-    }
-
-    const articleFinal = smartRes.item?.article || articleTerrain;
-    const classicRes = await saveClassicInventoryBatch([{
-      produit: articleFinal,
-      qte,
-      unite: smartRes.item?.unite || unite,
-      comment: `Inventaire intelligent — terrain : ${articleTerrain}`
-    }]);
-
-    if (!isOk(classicRes)) {
       setSmartStatus(
-        `⚠️ SAS intelligent rempli, mais inventaire classique non rempli : ${classicRes.message || "Erreur"}`,
+        "⚠️ Plusieurs articles possibles. Sélectionne le bon puis reclique sur enregistrer.",
         "warning"
       );
       return;
     }
 
-    setSmartStatus(`✅ Rempli dans les 2 inventaires : ${articleFinal}`, "ok");
-
-    articleInput.value = "";
-    qteInput.value = "";
-    uniteInput.value = "";
-    smartSelectedCle = "";
-
-    suggestionsBox.innerHTML = `<div class="muted-dark">Aucune proposition fixe.</div>`;
-  });
-
-  btnBulk.addEventListener("click", async () => {
-    const raw = bulkText.value.trim();
-
-    if (!raw) {
-      alert("Colle ton inventaire terrain avant d’importer.");
-      return;
-    }
-
-    const rows = parseSmartBulkText(raw, {
-      mois: qs("#invmMois").value,
-      poste: qs("#invmZone").value
-    });
-
-    if (!rows.length) {
-      alert("Aucune ligne exploitable trouvée.");
-      return;
-    }
-
-    setSmartStatus(`⏳ Import intelligent de ${rows.length} ligne(s)...`, "loading");
-
-    const smartRes = await apiPost("inventorySmartBulkImport", {
-      mois: qs("#invmMois").value,
-      poste: qs("#invmZone").value,
-      rows
-    });
-
     if (!isOk(smartRes)) {
-      setSmartStatus("❌ Import intelligent impossible : " + (smartRes.message || "Erreur"), "error");
+      addInventoryRescue(
+        {
+          type: "SMART_FAILED",
+          ...originalPayload
+        },
+        smartRes.message || "Échec inventaire intelligent"
+      );
+
+      setSmartStatus(
+        "❌ Inventaire intelligent non rempli. Saisie gardée en secours local : " +
+          (smartRes.message || "Erreur inconnue"),
+        "error"
+      );
+
       return;
     }
 
-    const okClassicRows = [];
+    const classicRes = await classicFallbackAfterSmart(smartRes, originalPayload);
 
-    (smartRes.details || []).forEach(d => {
-      if (d.result && isOk(d.result)) {
-        okClassicRows.push({
-          produit: d.result.item?.article || d.input.articleTerrain,
-          qte: d.input.qte,
-          unite: d.result.item?.unite || d.input.unite || "",
-          comment: `Import intelligent — terrain : ${d.input.articleTerrain}`
-        });
-      }
-    });
-
-    let classicRes = { status: "success", ok: true };
-
-    if (okClassicRows.length) {
-      classicRes = await saveClassicInventoryBatch(okClassicRows);
-    }
-
-    const s = smartRes.summary || {};
-    const msg = `✅ SAS : ${s.ok || 0} rangé(s), ${s.needChoice || 0} à valider, ${s.error || 0} erreur(s). Classique : ${okClassicRows.length} ligne(s).`;
+    const articleFinal =
+      smartRes?.item?.article ||
+      smartRes?.item?.produit ||
+      articleTerrain;
 
     if (!isOk(classicRes)) {
-      setSmartStatus(msg + " ⚠️ Mais l’inventaire classique n’a pas tout pris.", "warning");
+      setSmartStatus(
+        `⚠️ SAS rempli, mais inventaire classique non confirmé. Ligne gardée en secours local : ${articleFinal}`,
+        "warning"
+      );
       return;
     }
 
-    setSmartStatus(msg, "ok");
+    setSmartStatus(
+      `✅ Double sécurité OK : SAS + inventaire classique remplis pour ${articleFinal}`,
+      "ok"
+    );
+
+    articleInput.value = "";
+    if (qteInput) qteInput.value = "";
+    if (uniteInput) uniteInput.value = "";
+    smartSelectedCle = "";
+
+    if (suggestionsBox) {
+      suggestionsBox.innerHTML = `<div class="muted-dark">Aucune proposition fixe.</div>`;
+    }
   });
 
+  if (btnBulk && bulkText) {
+    btnBulk.addEventListener("click", async () => {
+      const raw = bulkText.value.trim();
+
+      if (!raw) {
+        alert("Colle ton inventaire terrain avant d’importer.");
+        return;
+      }
+
+      const rows = parseSmartBulkText(raw, {
+        mois: qs("#invmMois")?.value || currentMonth(),
+        poste: qs("#invmZone")?.value || "A_RECLASSER"
+      });
+
+      if (!rows.length) {
+        alert("Aucune ligne exploitable trouvée.");
+        return;
+      }
+
+      setSmartStatus(`⏳ Import intelligent de ${rows.length} ligne(s)...`, "loading");
+
+      const smartRes = await apiPost("inventorySmartBulkImport", {
+        mois: qs("#invmMois")?.value || currentMonth(),
+        poste: qs("#invmZone")?.value || "A_RECLASSER",
+        rows
+      });
+
+      if (!isOk(smartRes)) {
+        rows.forEach(r => {
+          addInventoryRescue(
+            {
+              type: "SMART_FAILED",
+              ...r
+            },
+            smartRes.message || "Échec import intelligent"
+          );
+        });
+
+        setSmartStatus("❌ Import intelligent impossible. Lignes gardées en secours local.", "error");
+        return;
+      }
+
+      const backendAlreadyDidClassic =
+        (smartRes.details || []).some(d =>
+          d.result &&
+          d.result.doubleWrite &&
+          d.result.doubleWrite.inventaireClassiqueApp === true
+        );
+
+      let classicRes = { status: "success", ok: true };
+      let okClassicRows = [];
+
+      if (!backendAlreadyDidClassic) {
+        (smartRes.details || []).forEach(d => {
+          if (d.result && isOk(d.result)) {
+            okClassicRows.push({
+              produit: d.result.item?.article || d.input.articleTerrain,
+              qte: d.input.qte,
+              unite: d.result.item?.unite || d.input.unite || "",
+              comment: `Import intelligent — terrain : ${d.input.articleTerrain}`
+            });
+          }
+        });
+
+        if (okClassicRows.length) {
+          classicRes = await saveClassicInventoryBatch(okClassicRows);
+        }
+
+        if (!isOk(classicRes)) {
+          okClassicRows.forEach(r => {
+            addInventoryRescue(
+              {
+                type: "CLASSIC_FALLBACK_FAILED",
+                articleTerrain: r.comment,
+                articleFinal: r.produit,
+                qte: r.qte,
+                unite: r.unite,
+                poste: qs("#invmZone")?.value || "",
+                mois: qs("#invmMois")?.value || ""
+              },
+              classicRes.message || "Échec inventaire classique après import"
+            );
+          });
+        }
+      }
+
+      const s = smartRes.summary || {};
+      const msg =
+        `✅ SAS : ${s.ok || 0} rangé(s), ${s.needChoice || 0} à valider, ${s.error || 0} erreur(s). ` +
+        `Classique : ${backendAlreadyDidClassic ? "géré par backend" : okClassicRows.length + " ligne(s)"}.`;
+
+      if (!isOk(classicRes)) {
+        setSmartStatus(msg + " ⚠️ Secours local activé pour les lignes non confirmées.", "warning");
+        return;
+      }
+
+      setSmartStatus(msg, "ok");
+    });
+  }
+
   function renderSmartChoices(items) {
+    if (!suggestionsBox) return;
+
     if (!items.length) {
       suggestionsBox.innerHTML = `<div class="muted-dark">Aucune proposition exploitable.</div>`;
       return;
@@ -882,7 +1175,7 @@ function mountInventorySmart() {
         qsa(".smart-choice", suggestionsBox).forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         smartSelectedCle = btn.dataset.cle || "";
-        setSmartStatus("✅ Choix sélectionné. Reclique sur enregistrer intelligemment.", "ok");
+        setSmartStatus("✅ Article Axel sélectionné. Tu peux enregistrer.", "ok");
       });
     });
   }
@@ -929,6 +1222,7 @@ function parseSmartBulkText(raw, defaults = {}) {
     .filter(x => x.articleTerrain && x.qte);
 }
 
+
 // ============================================================
 // RECETTES
 // ============================================================
@@ -939,6 +1233,8 @@ async function mountRecettes() {
   try {
     const res = await api("getRecettes");
     const list = qs("#recettesList");
+
+    if (!list) return;
 
     if (!isOk(res)) {
       list.innerHTML = `<div class="muted">Erreur de chargement.</div>`;
@@ -1017,7 +1313,8 @@ async function mountRecettes() {
       });
     }
   } catch (e) {
-    qs("#recettesList").innerHTML = `<div class="muted">Erreur de chargement.</div>`;
+    const list = qs("#recettesList");
+    if (list) list.innerHTML = `<div class="muted">Erreur de chargement.</div>`;
   }
 }
 
@@ -1088,6 +1385,7 @@ function renderRecetteDetail(card, recette, factorInit) {
   setFactor(f0);
 }
 
+
 // ============================================================
 // PARAMÈTRES
 // ============================================================
@@ -1098,17 +1396,40 @@ function mountSettings() {
   const email = localStorage.getItem("emailCC") || "";
   const lang = localStorage.getItem("lang") || "fr";
 
-  qs("#setEtab").value = etab;
-  qs("#setTz").value = tz;
-  qs("#setEmail").value = email;
-  qs("#setLang").value = lang;
+  if (qs("#setEtab")) qs("#setEtab").value = etab;
+  if (qs("#setTz")) qs("#setTz").value = tz;
+  if (qs("#setEmail")) qs("#setEmail").value = email;
+  if (qs("#setLang")) qs("#setLang").value = lang;
 
-  qs("#btnSetSave").addEventListener("click", () => {
-    localStorage.setItem("etab", qs("#setEtab").value);
-    localStorage.setItem("tz", qs("#setTz").value);
-    localStorage.setItem("emailCC", qs("#setEmail").value);
-    localStorage.setItem("lang", qs("#setLang").value);
+  const btnSave = qs("#btnSetSave");
 
-    alert("Paramètres enregistrés ✅");
-  });
+  if (btnSave) {
+    btnSave.addEventListener("click", () => {
+      localStorage.setItem("etab", qs("#setEtab")?.value || "");
+      localStorage.setItem("tz", qs("#setTz")?.value || "Europe/Paris");
+      localStorage.setItem("emailCC", qs("#setEmail")?.value || "");
+      localStorage.setItem("lang", qs("#setLang")?.value || "fr");
+
+      alert("Paramètres enregistrés ✅");
+    });
+  }
+
+  const btnRetry = qs("#btnRescueRetry");
+
+  if (btnRetry) {
+    btnRetry.addEventListener("click", retryInventoryRescueQueue);
+  }
+
+  const btnClear = qs("#btnRescueClear");
+
+  if (btnClear) {
+    btnClear.addEventListener("click", () => {
+      if (!confirm("Supprimer les saisies gardées en secours local ?")) return;
+      writeInventoryRescueQueue([]);
+      updateRescueCounter();
+      alert("Secours local vidé.");
+    });
+  }
+
+  updateRescueCounter();
 }
