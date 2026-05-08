@@ -3,14 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Fouquet’s Joy • Gold Motion v16.6</title>
+
+  <title>Fouquet’s Joy • Gold Motion v17.3</title>
+
   <meta name="theme-color" content="#5A0D0D"/>
+
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/favicon.ico">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="styles.css">
+
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script defer src="app.js"></script>
+
   <style>
     .toggle-container {
       display: flex;
@@ -21,66 +26,164 @@
       color: #5A0D0D;
       gap: 10px;
     }
+
     .toggle-switch {
       position: relative;
       display: inline-block;
       width: 50px;
       height: 26px;
     }
-    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
     .slider {
       position: absolute;
       cursor: pointer;
-      top: 0; left: 0; right: 0; bottom: 0;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       background-color: #ccc;
       transition: .4s;
       border-radius: 26px;
     }
+
     .slider:before {
       position: absolute;
       content: "";
-      height: 20px; width: 20px;
-      left: 3px; bottom: 3px;
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
       background-color: white;
       transition: .4s;
       border-radius: 50%;
     }
 
+    input:checked + .slider {
+      background-color: #C9A227;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+
+    /* ============================================================
+       🧠 INVENTAIRE INTELLIGENT
+       ============================================================ */
+
+    .invm-smart {
+      border: 1px solid rgba(201, 162, 39, 0.35);
+      background: linear-gradient(145deg, #fffaf0, #ffffff);
+    }
+
+    .invm-smart .card-title {
+      color: #5A0D0D;
+      font-weight: 700;
+    }
+
+    .invm-smart textarea {
+      width: 100%;
+      min-height: 150px;
+      resize: vertical;
+      box-sizing: border-box;
+      border-radius: 10px;
+      padding: 0.75rem;
+      font-family: inherit;
+      font-size: 1rem;
+    }
+
+    #smartSuggestions {
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .smart-choice {
+      border: 1px solid rgba(90, 13, 13, 0.18);
+      background: #fff;
+      transition: 0.2s ease;
+    }
+
+    .smart-choice:hover {
+      border-color: #C9A227;
+      background: #fff8e6;
+    }
+
+    .smart-choice.active {
+      border: 2px solid #C9A227 !important;
+      background: #fff3bf !important;
+      box-shadow: 0 4px 12px rgba(201, 162, 39, 0.2);
+    }
+
+    #smartStatus {
+      padding: 0.65rem 0.75rem;
+      border-radius: 10px;
+      background: rgba(90, 13, 13, 0.05);
+      color: #5A0D0D;
+      min-height: 1.2rem;
+    }
+
+    .locked {
+      background: #f3f3f3;
+      color: #555;
+    }
+
     @media (max-width: 768px) {
-  .grid {
-    display: flex;
-    flex-direction: column;
-    gap: 0.8rem;
-  }
+      .grid {
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+      }
 
-  .input-field {
-    width: 100%;
-  }
+      .input-field {
+        width: 100%;
+      }
 
-  .input-field input,
-  .input-field select {
-    width: 100%;
-    font-size: 1rem;
-    padding: 0.6rem;
-    box-sizing: border-box;
-  }
+      .input-field input,
+      .input-field select,
+      .input-field textarea {
+        width: 100%;
+        font-size: 1rem;
+        padding: 0.6rem;
+        box-sizing: border-box;
+      }
 
-  .row-actions {
-    flex-direction: column;
-    gap: 0.6rem;
-  }
+      .row-actions {
+        flex-direction: column;
+        gap: 0.6rem;
+      }
 
-  .btn {
-    width: 100%;
-    border-radius: 10px;
-  }
+      .btn {
+        width: 100%;
+        border-radius: 10px;
+      }
 
-  table.list th, table.list td {
-    font-size: 0.9rem;
-  }
-}    
-    input:checked + .slider { background-color: #C9A227; }
-    input:checked + .slider:before { transform: translateX(24px); }
+      table.list th,
+      table.list td {
+        font-size: 0.9rem;
+      }
+
+      .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+
+      .actions {
+        width: 100%;
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .tabs {
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+    }
   </style>
 </head>
 
@@ -88,11 +191,13 @@
   <header class="topbar">
     <div class="brand">
       <div class="brand-badge">F</div>
+
       <div class="brand-text">
         <div class="brand-title">Fouquet’s Joy</div>
         <div class="brand-sub">Gold Motion • Ivoire & Or</div>
       </div>
     </div>
+
     <div class="actions">
       <span id="syncBadge" class="status-badge offline" title="Statut">Hors ligne</span>
       <button class="btn ghost" id="btnSync">⇅ Synchroniser</button>
@@ -109,9 +214,14 @@
   </nav>
 
   <main id="app" class="container"></main>
-  <footer class="footer">© Fouquet’s Joy – Gold Motion v16.6</footer>
 
-  <!-- === DASHBOARD === -->
+  <footer class="footer">
+    © Fouquet’s Joy – Gold Motion v17.3
+  </footer>
+
+  <!-- ============================================================
+       📊 DASHBOARD
+       ============================================================ -->
   <template id="tpl-dashboard">
     <section class="section">
       <div class="grid-3">
@@ -120,11 +230,13 @@
           <div class="kpi-value" id="kpiStock">—</div>
           <div class="kpi-sub" id="kpiStockQte">—</div>
         </div>
+
         <div class="card kpi">
-          <div class="kpi-title">Pertes (mois)</div>
+          <div class="kpi-title">Pertes mois</div>
           <div class="kpi-value" id="kpiPertes">—</div>
-          <div class="kpi-sub" id="kpiPertesLabel">Poids total des pertes (kg)</div>
+          <div class="kpi-sub" id="kpiPertesLabel">Poids total des pertes kg</div>
         </div>
+
         <div class="card kpi">
           <div class="kpi-title">Alertes seuil</div>
           <div class="kpi-value" id="kpiSeuils">—</div>
@@ -134,54 +246,80 @@
 
       <div class="card">
         <div class="card-title">📋 État du stock courant</div>
+
         <table class="list" id="tableStockDetail">
           <thead>
             <tr>
-              <th>Produit</th><th>Qté</th><th>Unité</th><th>Prix (€)</th><th>Valeur (€)</th><th>Zone</th>
+              <th>Produit</th>
+              <th>Qté</th>
+              <th>Unité</th>
+              <th>Prix €</th>
+              <th>Valeur €</th>
+              <th>Zone</th>
             </tr>
           </thead>
+
           <tbody></tbody>
         </table>
       </div>
 
       <div class="card">
         <div class="card-title">📉 Analyse des pertes</div>
+
         <div class="toggle-container">
           <span>Vue simple</span>
+
           <label class="toggle-switch">
-            <input type="checkbox" id="togglePareto"><span class="slider"></span>
+            <input type="checkbox" id="togglePareto">
+            <span class="slider"></span>
           </label>
+
           <span>Pareto</span>
         </div>
+
         <canvas id="chartPertes" height="140"></canvas>
+
         <div id="pertesLegend"></div>
       </div>
     </section>
   </template>
 
-  <!-- === PERTES === -->
+  <!-- ============================================================
+       🗑️ PERTES
+       ============================================================ -->
   <template id="tpl-pertes">
     <section class="section">
       <div class="card">
         <div class="card-title">🗑️ Saisie des pertes</div>
+
         <div class="grid">
-          <div class="input-field"><label for="pertesProduit">Produit</label>
+          <div class="input-field">
+            <label for="pertesProduit">Produit</label>
             <input id="pertesProduit" list="dlProduitsPertes" placeholder="Choisir ou saisir" />
             <datalist id="dlProduitsPertes"></datalist>
           </div>
-          <div class="input-field"><label for="pertesQte">Quantité</label>
+
+          <div class="input-field">
+            <label for="pertesQte">Quantité</label>
             <input id="pertesQte" type="number" step="0.01" placeholder="Ex. 1.20"/>
           </div>
-          <div class="input-field"><label for="pertesUnite">Unité</label>
+
+          <div class="input-field">
+            <label for="pertesUnite">Unité</label>
             <input id="pertesUnite" placeholder="kg / L / pièce"/>
           </div>
-          <div class="input-field"><label for="pertesMotif">Motif</label>
+
+          <div class="input-field">
+            <label for="pertesMotif">Motif</label>
             <input id="pertesMotif" placeholder="DLUO / Casse / Surcuisson"/>
           </div>
-          <div class="input-field"><label for="pertesComment">Commentaire</label>
+
+          <div class="input-field">
+            <label for="pertesComment">Commentaire</label>
             <input id="pertesComment" placeholder="Optionnel"/>
           </div>
         </div>
+
         <div class="row-actions">
           <button class="btn" id="btnSavePerte">💾 Enregistrer</button>
           <button class="btn ghost" id="btnResetPerte">↩️ Réinitialiser</button>
@@ -190,23 +328,32 @@
     </section>
   </template>
 
-  <!-- === INVENTAIRE JOURNALIER === -->
+  <!-- ============================================================
+       📦 INVENTAIRE JOURNALIER
+       ============================================================ -->
   <template id="tpl-invj">
     <section class="section">
       <div class="card">
         <div class="card-title">📦 Inventaire journalier</div>
+
         <div class="grid">
-          <div class="input-field"><label for="invjProduit">Produit</label>
+          <div class="input-field">
+            <label for="invjProduit">Produit</label>
             <input id="invjProduit" list="dlProduitsInvJ" placeholder="Nom du produit"/>
             <datalist id="dlProduitsInvJ"></datalist>
           </div>
-          <div class="input-field"><label for="invjQte">Quantité</label>
+
+          <div class="input-field">
+            <label for="invjQte">Quantité</label>
             <input id="invjQte" type="number" step="0.01" placeholder="Ex. 2.50"/>
           </div>
-          <div class="input-field"><label for="invjUnite">Unité</label>
+
+          <div class="input-field">
+            <label for="invjUnite">Unité</label>
             <input id="invjUnite" placeholder="kg / L / pièce"/>
           </div>
         </div>
+
         <div class="row-actions">
           <button class="btn success" id="btnInvJEntree">⬆️ Entrée</button>
           <button class="btn danger" id="btnInvJSortie">⬇️ Sortie</button>
@@ -216,33 +363,22 @@
     </section>
   </template>
 
-  <!-- === INVENTAIRE MENSUEL === -->
+  <!-- ============================================================
+       🏷️ INVENTAIRE MENSUEL
+       Le contenu complet est généré dans app.js par mountInvM()
+       ============================================================ -->
   <template id="tpl-invm">
     <section class="section">
-      <div class="card invm-header">
+      <div class="card">
         <div class="card-title">🏷️ Inventaire Mensuel</div>
-        <div class="grid" style="align-items:end;">
-          <div class="input-field"><label for="invmZone">Zone</label><select id="invmZone"></select></div>
-          <div class="input-field"><label for="invmMois">Mois</label><input type="month" id="invmMois"/></div>
-          <div class="input-field"><button class="btn gold" id="btnGenSheet">📄 Générer la feuille</button></div>
-        </div>
-      </div>
-
-      <div class="card invm-body">
-        <div class="card-subtitle">📋 Feuille d’inventaire</div>
-        <table class="list" id="invTable">
-          <thead><tr><th>Produit</th><th>Quantité</th><th>Unité</th><th>Commentaire</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <div class="row-actions center">
-          <button class="btn ghost" id="btnAddRow">➕ Ajouter une ligne</button>
-          <button class="btn success" id="btnSaveInv">💾 Valider l’inventaire</button>
-        </div>
+        <div class="muted">Chargement de l’inventaire mensuel...</div>
       </div>
     </section>
   </template>
 
-  <!-- === RECETTES === -->
+  <!-- ============================================================
+       🍽️ RECETTES
+       ============================================================ -->
   <template id="tpl-recettes">
     <section class="section">
       <div class="card">
@@ -253,10 +389,11 @@
             <label for="recetteSearch">Recherche</label>
             <input id="recetteSearch" placeholder="Rechercher une recette...">
           </div>
+
           <div class="input-field" style="flex:1;">
             <label for="recetteMulti">Multiplicateur</label>
             <select id="recetteMulti">
-              <option value="1">×1 (base)</option>
+              <option value="1">×1 base</option>
               <option value="0.5">×0.5</option>
               <option value="2">×2</option>
               <option value="3">×3</option>
@@ -270,22 +407,48 @@
     </section>
   </template>
 
-  <!-- === PARAMÈTRES === -->
+  <!-- ============================================================
+       ⚙️ PARAMÈTRES
+       ============================================================ -->
   <template id="tpl-settings">
     <section class="section">
       <div class="card">
         <div class="card-title">⚙️ Paramètres</div>
+
         <div class="grid">
-          <div class="input-field"><label for="setEtab">Établissement</label>
-            <input id="setEtab" placeholder="Fouquet’s Joy"/></div>
-          <div class="input-field"><label for="setTz">Fuseau horaire</label>
-            <select id="setTz"><option>Europe/Paris</option><option>Europe/Rome</option><option>America/New_York</option></select></div>
-          <div class="input-field"><label for="setEmail">Email Cost-Control</label>
-            <input id="setEmail" placeholder="costcontrol@fouquets.fr"/></div>
-          <div class="input-field"><label for="setLang">Langue</label>
-            <select id="setLang"><option value="fr">Français</option><option value="en">English</option><option value="it">Italiano</option><option value="es">Español</option></select></div>
+          <div class="input-field">
+            <label for="setEtab">Établissement</label>
+            <input id="setEtab" placeholder="Fouquet’s Joy"/>
+          </div>
+
+          <div class="input-field">
+            <label for="setTz">Fuseau horaire</label>
+            <select id="setTz">
+              <option>Europe/Paris</option>
+              <option>Europe/Rome</option>
+              <option>America/New_York</option>
+            </select>
+          </div>
+
+          <div class="input-field">
+            <label for="setEmail">Email Cost-Control</label>
+            <input id="setEmail" placeholder="costcontrol@fouquets.fr"/>
+          </div>
+
+          <div class="input-field">
+            <label for="setLang">Langue</label>
+            <select id="setLang">
+              <option value="fr">Français</option>
+              <option value="en">English</option>
+              <option value="it">Italiano</option>
+              <option value="es">Español</option>
+            </select>
+          </div>
         </div>
-        <div class="row-actions"><button class="btn" id="btnSetSave">💾 Enregistrer</button></div>
+
+        <div class="row-actions">
+          <button class="btn" id="btnSetSave">💾 Enregistrer</button>
+        </div>
       </div>
     </section>
   </template>
