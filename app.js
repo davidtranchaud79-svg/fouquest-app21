@@ -9,10 +9,10 @@
 // ============================================================
 
 // Backend principal de l'application Fouquet’s Joy
-const APP_API_URL = "COLLE_ICI_URL_BACKEND_APPLICATION_EXEC";
+const APP_API_URL = "https://script.google.com/macros/s/AKfycbxqh8yvag7cBGZ34zza181fpWV2TssYeQIIqUEd5ZI91knMY5jSK6sUP0QDEULfh12a/exec";
 
 // Backend inventaire intelligent / SAS Axel
-const INV_API_URL = "COLLE_ICI_URL_BACKEND_INVENTAIRE_EXEC";
+const INV_API_URL = "https://script.google.com/macros/s/AKfycbygquFYaTfMH1UzfViq9o6t23AhYwag4PTqtS257uKO82mjAXi6a8U5K_qEzktbWKafVQ/exec";
 
 // Si tu utilises le Code.gs v17.4 multi-classeurs dans un seul Apps Script,
 // mets la même URL dans les deux lignes ci-dessus.
