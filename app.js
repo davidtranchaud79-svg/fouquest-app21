@@ -12,7 +12,7 @@
 const APP_API_URL = "https://script.google.com/macros/s/AKfycbxqh8yvag7cBGZ34zza181fpWV2TssYeQIIqUEd5ZI91knMY5jSK6sUP0QDEULfh12a/exec";
 
 // Backend inventaire intelligent / SAS Axel
-const INV_API_URL = "https://script.google.com/macros/s/AKfycbxqWzXloGgHAmP0750Zt_Jt8i8OdgLHZYnFfoiP5VfGWcClS28dCtNc0uoJhWsKvINk3g/exec";
+const INV_API_URL = "https://script.google.com/macros/s/AKfycbyH-HOgwqbc7yNIAzPZL-fY4ZJ1_HAzPhBp83w_QkoOztWylPHDt_537jRxDkucQ2lAKw/exec";
 
 // Si tu utilises le Code.gs v17.4 multi-classeurs dans un seul Apps Script,
 // mets la même URL dans les deux lignes ci-dessus.
