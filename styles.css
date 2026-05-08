@@ -1,11 +1,6 @@
 /* ============================================================
-   🍷 Fouquet’s Joy – Gold Motion v17.3
-   Thème : Bordeaux profond, Ivoire & Or
-   + Inventaire mensuel intelligent
-   ============================================================ */
-
-/* ============================================================
-   RESET & BASE
+   🍷 Fouquet’s Joy – Gold Motion v17.5
+   Thème : Bordeaux profond / Or / Ivoire lisible
    ============================================================ */
 
 * {
@@ -13,27 +8,15 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
 body {
   margin: 0;
-  font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
   background:
-    radial-gradient(circle at top left, rgba(201, 162, 39, 0.12), transparent 28%),
-    linear-gradient(180deg, #5a0d0d 0%, #4a0909 45%, #2f0505 100%);
-  color: #f8f3e6;
+    radial-gradient(circle at top, rgba(201,162,39,0.16), transparent 28%),
+    linear-gradient(180deg, #3b0707, #5a0d0d 55%, #2b0404);
+  color: #fff8e7;
   line-height: 1.5;
   font-size: 15px;
-  min-height: 100vh;
-}
-
-h1,
-h2,
-h3 {
-  margin: 0.5em 0;
-  color: #ffefc1;
 }
 
 a {
@@ -41,20 +24,17 @@ a {
   text-decoration: none;
 }
 
-hr {
-  border: none;
-  border-top: 1px solid rgba(201, 162, 39, 0.28);
-  margin: 1.2rem 0;
-}
-
 .muted {
-  color: #d6c6a8;
+  color: #d9cba9;
   font-size: 0.9em;
 }
 
-/* ============================================================
-   LAYOUT GLOBAL
-   ============================================================ */
+.muted-dark {
+  color: #6b5a3d;
+  font-size: 0.9em;
+}
+
+/* HEADER */
 
 .topbar {
   background: linear-gradient(90deg, #5a0d0d, #7b1313);
@@ -63,43 +43,34 @@ hr {
   align-items: center;
   justify-content: space-between;
   padding: 0.8em 1em;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.35);
   position: sticky;
   top: 0;
   z-index: 99;
-  border-bottom: 1px solid rgba(201, 162, 39, 0.35);
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.75em;
 }
 
 .brand-badge {
-  background: linear-gradient(145deg, #c9a227, #e2c45d);
-  color: #5a0d0d;
-  font-weight: 900;
+  background: linear-gradient(135deg, #c9a227, #f1d779);
+  color: #4a0909;
+  font-weight: bold;
   border-radius: 50%;
   width: 38px;
   height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow:
-    inset 0 0 6px rgba(255, 255, 255, 0.35),
-    0 3px 8px rgba(0, 0, 0, 0.35);
-}
-
-.brand-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
+  box-shadow: inset 0 0 6px rgba(0,0,0,0.22);
 }
 
 .brand-title {
   font-weight: 700;
-  font-size: 1.12em;
+  font-size: 1.1em;
 }
 
 .brand-sub {
@@ -110,25 +81,21 @@ hr {
 .actions {
   display: flex;
   align-items: center;
-  gap: 1em;
+  gap: 0.7em;
 }
 
-/* ============================================================
-   STATUS BADGE
-   ============================================================ */
+/* STATUS */
 
 .status-badge {
-  padding: 0.35em 0.85em;
+  padding: 0.35em 0.8em;
   border-radius: 999px;
   font-size: 0.8em;
   font-weight: 700;
-  transition: 0.3s ease;
-  white-space: nowrap;
 }
 
 .status-badge.online {
-  background: #c9a227;
-  color: #4a0909;
+  background: #2e8b57;
+  color: #fff;
 }
 
 .status-badge.offline {
@@ -141,60 +108,44 @@ hr {
   color: #fff;
 }
 
-/* ============================================================
-   NAVIGATION
-   ============================================================ */
+/* NAV */
 
 .tabs {
   display: flex;
-  background: rgba(90, 13, 13, 0.95);
+  background: rgba(46, 5, 5, 0.95);
   border-bottom: 2px solid #c9a227;
   overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #c9a227 #5a0d0d;
-}
-
-.tabs::-webkit-scrollbar {
-  height: 6px;
-}
-
-.tabs::-webkit-scrollbar-track {
-  background: #5a0d0d;
-}
-
-.tabs::-webkit-scrollbar-thumb {
-  background: #c9a227;
-  border-radius: 999px;
+  position: sticky;
+  top: 64px;
+  z-index: 80;
 }
 
 .tab {
   flex: 1;
-  min-width: max-content;
+  min-width: 145px;
   border: none;
   background: transparent;
-  padding: 0.9em 1em;
+  padding: 0.9em;
   font-weight: 700;
   cursor: pointer;
   color: #f8eec9;
-  transition: 0.25s ease;
+  transition: 0.25s;
 }
 
 .tab:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255,255,255,0.08);
 }
 
 .tab.active {
-  background: linear-gradient(90deg, #c9a227, #e2c45d);
+  background: linear-gradient(90deg, #c9a227, #f1d779);
   color: #4a0909;
 }
 
-/* ============================================================
-   CONTAINER & SECTIONS
-   ============================================================ */
+/* LAYOUT */
 
 .container {
   padding: 1em;
-  max-width: 1150px;
+  max-width: 1180px;
   margin: auto;
 }
 
@@ -204,39 +155,24 @@ hr {
   gap: 1.2em;
 }
 
-/* ============================================================
-   CARDS
-   ============================================================ */
+/* CARDS */
 
 .card {
-  background: rgba(255, 255, 255, 0.065);
+  background: rgba(255,255,255,0.075);
+  border: 1px solid rgba(201,162,39,0.25);
   border-radius: 16px;
   padding: 1em 1.2em;
-  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.32);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.28);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(201, 162, 39, 0.18);
-  transition: all 0.25s ease;
 }
 
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.42);
-}
-
-.card-title,
-.card-subtitle {
-  font-weight: 700;
+.card-title {
+  font-weight: 800;
   color: #ffefc1;
-  margin-bottom: 0.65em;
+  margin-bottom: 0.8em;
 }
 
-.card-subtitle {
-  font-size: 1em;
-}
-
-/* ============================================================
-   KPI
-   ============================================================ */
+/* KPI */
 
 .grid-3 {
   display: grid;
@@ -246,25 +182,12 @@ hr {
 
 .kpi {
   text-align: center;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.08),
-    rgba(201, 162, 39, 0.16)
-  );
-  border: 1px solid rgba(201, 162, 39, 0.35);
-  border-radius: 14px;
-  padding: 0.9em 0.6em;
-  transition: transform 0.3s ease;
-}
-
-.kpi:hover {
-  transform: translateY(-3px);
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(201,162,39,0.16));
 }
 
 .kpi-title {
   font-weight: 700;
   color: #f4e5b3;
-  margin-bottom: 0.25em;
 }
 
 .kpi-value {
@@ -278,105 +201,32 @@ hr {
   color: #d6c6a8;
 }
 
-/* ============================================================
-   TABLES
-   ============================================================ */
+/* TABLES */
 
 table.list {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.95em;
+  font-size: 0.94em;
   color: #fff8e7;
-  overflow: hidden;
-  border-radius: 12px;
 }
 
 table.list th,
 table.list td {
   padding: 0.65em;
-  border-bottom: 1px solid rgba(201, 162, 39, 0.26);
-  vertical-align: middle;
+  border-bottom: 1px solid rgba(201,162,39,0.28);
 }
 
 table.list thead {
-  background: rgba(201, 162, 39, 0.16);
+  background: rgba(201,162,39,0.18);
   color: #ffefc1;
   text-align: left;
 }
 
 table.list tbody tr:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255,255,255,0.08);
 }
 
-table.list.mini th,
-table.list.mini td {
-  padding: 0.45em 0.55em;
-  font-size: 0.9em;
-}
-
-/* ============================================================
-   FORMULAIRES
-   ============================================================ */
-
-.input-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.28em;
-}
-
-.input-field label {
-  font-weight: 700;
-  color: #ffefc1;
-  margin-bottom: 0.15em;
-}
-
-.input-field input,
-.input-field select,
-.input-field textarea {
-  width: 100%;
-  border: 1px solid rgba(201, 162, 39, 0.42);
-  border-radius: 10px;
-  padding: 0.65em 0.85em;
-  font-size: 1em;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff8e7;
-  transition: 0.2s ease;
-  font-family: inherit;
-}
-
-.input-field textarea {
-  min-height: 130px;
-  resize: vertical;
-}
-
-.input-field input::placeholder,
-.input-field textarea::placeholder {
-  color: rgba(255, 248, 231, 0.55);
-}
-
-.input-field input:focus,
-.input-field select:focus,
-.input-field textarea:focus {
-  outline: none;
-  border-color: #c9a227;
-  box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.3);
-  background: rgba(255, 255, 255, 0.14);
-}
-
-select option {
-  background: #4a0909;
-  color: #fff8e7;
-}
-
-.locked {
-  background: rgba(255, 255, 255, 0.06) !important;
-  color: #d6c6a8 !important;
-  cursor: not-allowed;
-}
-
-/* ============================================================
-   GRID & ACTIONS
-   ============================================================ */
+/* FORMS */
 
 .grid {
   display: grid;
@@ -384,48 +234,83 @@ select option {
   gap: 1em;
 }
 
-.grid-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1em;
+.input-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
 }
+
+.input-field label {
+  font-weight: 800;
+  color: #ffefc1;
+  margin-bottom: 0.15em;
+}
+
+.input-field input,
+.input-field select,
+textarea {
+  border: 1px solid rgba(201,162,39,0.55);
+  border-radius: 10px;
+  padding: 0.72em 0.85em;
+  font-size: 1em;
+  background: #fff8e7;
+  color: #2d170e;
+  transition: 0.2s;
+  width: 100%;
+}
+
+.input-field input::placeholder,
+textarea::placeholder {
+  color: #8c7c5b;
+}
+
+.input-field input:focus,
+.input-field select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #c9a227;
+  box-shadow: 0 0 0 3px rgba(201,162,39,0.28);
+}
+
+.locked {
+  background: #eee0bc !important;
+  color: #5a0d0d !important;
+}
+
+textarea {
+  min-height: 150px;
+  resize: vertical;
+}
+
+/* BUTTONS */
 
 .row-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.8em;
   margin-top: 0.9em;
+  flex-wrap: wrap;
 }
 
 .row-actions.center {
   justify-content: center;
 }
 
-/* ============================================================
-   BOUTONS
-   ============================================================ */
-
 .btn {
   background: #c9a227;
   color: #4a0909;
   border: none;
-  border-radius: 6px 18px 6px 18px;
-  padding: 0.65em 1.3em;
+  border-radius: 8px 22px 8px 22px;
+  padding: 0.68em 1.35em;
   font-weight: 800;
   cursor: pointer;
-  transition: all 0.25s ease;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.32);
-  font-family: inherit;
+  transition: all 0.22s ease;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.32);
 }
 
 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.42);
-}
-
-.btn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 7px 14px rgba(0,0,0,0.38);
 }
 
 .btn.success {
@@ -441,46 +326,194 @@ select option {
 .btn.ghost {
   background: transparent;
   border: 1px solid #c9a227;
-  color: #f5d77a;
+  color: #ffefc1;
   box-shadow: none;
 }
 
 .btn.ghost:hover {
-  background: rgba(201, 162, 39, 0.12);
+  background: rgba(201,162,39,0.12);
 }
 
 .btn.gold {
-  background: linear-gradient(90deg, #c9a227, #e2c45d);
+  background: linear-gradient(90deg, #c9a227, #f1d779);
   color: #4a0909;
-  font-weight: 800;
-  border-radius: 8px 20px 8px 20px;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
-}
-
-.btn.gold:hover {
-  background: linear-gradient(90deg, #e2c45d, #c9a227);
 }
 
 .btn.small {
-  font-size: 0.82em;
-  padding: 0.35em 0.7em;
+  font-size: 0.85em;
+  padding: 0.4em 0.75em;
 }
 
-.btn.large {
-  font-size: 1.1em;
-  padding: 0.8em 1.8em;
+/* INVENTAIRE MENSUEL — PLUS LISIBLE */
+
+.invm-header {
+  background: linear-gradient(135deg, rgba(255,248,231,0.16), rgba(201,162,39,0.16));
 }
 
-/* ============================================================
-   TOGGLE DASHBOARD
-   ============================================================ */
+.invm-body {
+  background: #fff8e7;
+  color: #2d170e;
+  border: 2px solid #c9a227;
+}
+
+.invm-body .card-title {
+  color: #5a0d0d;
+}
+
+.invm-body table.list {
+  color: #2d170e;
+}
+
+.invm-body table.list thead {
+  background: #5a0d0d;
+  color: #fff8e7;
+}
+
+.invm-body table.list th,
+.invm-body table.list td {
+  border-bottom: 1px solid rgba(90,13,13,0.2);
+}
+
+.inv-table input {
+  background: #ffffff;
+  color: #2d170e;
+  border: 1px solid #c9a227;
+  border-radius: 8px;
+  padding: 0.55em;
+  width: 100%;
+}
+
+/* INVENTAIRE INTELLIGENT */
+
+.smart-card {
+  background: #fff8e7;
+  color: #2d170e;
+  border: 2px solid #c9a227;
+  border-radius: 18px;
+  padding: 1.15em 1.25em;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.35);
+}
+
+.smart-title {
+  font-size: 1.15em;
+  font-weight: 900;
+  color: #5a0d0d;
+  margin-bottom: 0.4em;
+}
+
+.smart-help {
+  color: #6b5a3d;
+  margin: 0 0 1em;
+}
+
+.smart-card .input-field label {
+  color: #5a0d0d;
+}
+
+.smart-suggestions {
+  margin-top: 1em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55em;
+}
+
+.smart-choice {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(90,13,13,0.25);
+  background: #ffffff;
+  color: #2d170e;
+  border-radius: 12px;
+  padding: 0.75em 0.9em;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.smart-choice strong {
+  display: block;
+  color: #5a0d0d;
+  margin-bottom: 0.25em;
+}
+
+.smart-choice:hover {
+  border-color: #c9a227;
+  background: #fff3cb;
+}
+
+.smart-choice.active {
+  border: 2px solid #2e8b57;
+  background: #e2f0d9;
+}
+
+.smart-status {
+  margin-top: 0.9em;
+  padding: 0.8em 0.9em;
+  border-radius: 12px;
+  background: #f2ead2;
+  color: #4a0909;
+  font-weight: 800;
+}
+
+.smart-status:empty {
+  display: none;
+}
+
+.smart-status.ok {
+  background: #e2f0d9;
+  color: #1f6b3f;
+}
+
+.smart-status.warning {
+  background: #fff2cc;
+  color: #7a5200;
+}
+
+.smart-status.error {
+  background: #fce4d6;
+  color: #8b1a1a;
+}
+
+.smart-status.loading {
+  background: #ddebf7;
+  color: #1f4e79;
+}
+
+.smart-bulk {
+  margin-top: 1.2em;
+}
+
+.smart-bulk label {
+  display: block;
+  color: #5a0d0d;
+  font-weight: 900;
+  margin-bottom: 0.4em;
+}
+
+/* RECETTES */
+
+.grid-cards {
+  display: grid;
+  gap: 0.9em;
+}
+
+.recette-card {
+  cursor: pointer;
+  border: 1px solid rgba(201,162,39,0.25);
+}
+
+.recette-detail {
+  margin-top: 0.7em;
+  padding-top: 0.7em;
+  border-top: 1px solid rgba(255,255,255,0.15);
+}
+
+/* TOGGLE */
 
 .toggle-container {
   display: flex;
   justify-content: center;
   align-items: center;
   margin-top: 0.8rem;
-  margin-bottom: 0.8rem;
   font-weight: 700;
   color: #ffefc1;
   gap: 10px;
@@ -504,7 +537,7 @@ select option {
   cursor: pointer;
   inset: 0;
   background-color: #7a6a4f;
-  transition: 0.4s;
+  transition: .4s;
   border-radius: 26px;
 }
 
@@ -516,7 +549,7 @@ select option {
   left: 3px;
   bottom: 3px;
   background-color: white;
-  transition: 0.4s;
+  transition: .4s;
   border-radius: 50%;
 }
 
@@ -528,189 +561,7 @@ input:checked + .slider:before {
   transform: translateX(24px);
 }
 
-/* ============================================================
-   INVENTAIRE MENSUEL CLASSIQUE
-   ============================================================ */
-
-.invm-header,
-.invm-body,
-.invm-footer {
-  background: rgba(255, 255, 255, 0.075);
-  border: 1px solid rgba(201, 162, 39, 0.26);
-  border-radius: 16px;
-  padding: 1em 1.2em;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.32);
-}
-
-.invm-header-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 1em;
-  align-items: end;
-}
-
-.invm-header-grid .center {
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-}
-
-#invTable {
-  background: rgba(0, 0, 0, 0.22);
-  border-radius: 12px;
-  border: 1px solid rgba(201, 162, 39, 0.28);
-  width: 100%;
-}
-
-#invTable th {
-  background: rgba(201, 162, 39, 0.16);
-  color: #ffefc1;
-}
-
-#invTable td {
-  color: #fff8e7;
-  border-bottom: 1px solid rgba(201, 162, 39, 0.2);
-}
-
-#invTable input {
-  width: 100%;
-  padding: 0.5em;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(201, 162, 39, 0.32);
-  border-radius: 8px;
-  color: #fff8e7;
-}
-
-#invTable input:focus {
-  border-color: #c9a227;
-  box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.25);
-  background: rgba(201, 162, 39, 0.1);
-  outline: none;
-}
-
-/* ============================================================
-   INVENTAIRE INTELLIGENT
-   ============================================================ */
-
-.invm-smart {
-  border: 1px solid rgba(201, 162, 39, 0.42);
-  background:
-    radial-gradient(circle at top right, rgba(201, 162, 39, 0.16), transparent 32%),
-    rgba(255, 255, 255, 0.075);
-}
-
-.invm-smart .card-title {
-  color: #ffefc1;
-  font-weight: 800;
-}
-
-.invm-smart textarea {
-  width: 100%;
-  min-height: 160px;
-  resize: vertical;
-  box-sizing: border-box;
-  border-radius: 12px;
-  padding: 0.75rem;
-  font-family: inherit;
-  font-size: 1rem;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff8e7;
-  border: 1px solid rgba(201, 162, 39, 0.42);
-}
-
-.invm-smart textarea:focus {
-  outline: none;
-  border-color: #c9a227;
-  box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.3);
-}
-
-#smartSuggestions {
-  display: grid;
-  gap: 0.48rem;
-}
-
-.smart-choice {
-  border: 1px solid rgba(201, 162, 39, 0.3) !important;
-  background: rgba(255, 255, 255, 0.08) !important;
-  transition: 0.2s ease;
-  color: #fff8e7 !important;
-}
-
-.smart-choice:hover {
-  border-color: #c9a227 !important;
-  background: rgba(201, 162, 39, 0.14) !important;
-}
-
-.smart-choice.active {
-  border: 2px solid #c9a227 !important;
-  background: rgba(201, 162, 39, 0.25) !important;
-  box-shadow: 0 4px 14px rgba(201, 162, 39, 0.22);
-}
-
-.smart-choice strong {
-  color: #ffefc1;
-  display: block;
-  margin-bottom: 0.15rem;
-}
-
-.smart-choice .muted {
-  color: #e4d0a4;
-}
-
-#smartStatus {
-  padding: 0.7rem 0.85rem;
-  border-radius: 12px;
-  background: rgba(201, 162, 39, 0.12);
-  color: #ffefc1;
-  min-height: 1.2rem;
-  border: 1px solid rgba(201, 162, 39, 0.22);
-}
-
-/* ============================================================
-   RECETTES
-   ============================================================ */
-
-.recette-card {
-  cursor: pointer;
-  transition: all 0.25s ease;
-  border: 1px solid rgba(201, 162, 39, 0.22);
-}
-
-.recette-card:hover {
-  background: rgba(201, 162, 39, 0.1);
-  transform: translateY(-2px);
-}
-
-.recette-card.open {
-  border-color: rgba(201, 162, 39, 0.5);
-  background: rgba(201, 162, 39, 0.08);
-}
-
-.recette-detail {
-  margin-top: 10px;
-  padding: 10px 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  animation: fadeIn 0.25s ease;
-}
-
-.recette-detail table.mini th,
-.recette-detail table.mini td {
-  padding: 0.45em 0.55em;
-  font-size: 0.9em;
-  color: #fff8e7;
-}
-
-.factor-input {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff8e7;
-  border: 1px solid rgba(201, 162, 39, 0.35);
-  border-radius: 8px;
-  padding: 0.45em;
-}
-
-/* ============================================================
-   FOOTER
-   ============================================================ */
+/* FOOTER */
 
 .footer {
   text-align: center;
@@ -718,156 +569,47 @@ input:checked + .slider:before {
   font-size: 0.85em;
   padding: 1.2em;
   margin-top: 2em;
-  border-top: 1px solid rgba(201, 162, 39, 0.3);
+  border-top: 1px solid rgba(201,162,39,0.28);
 }
 
-/* ============================================================
-   ANIMATIONS
-   ============================================================ */
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-5px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ============================================================
-   RESPONSIVE TABLETTE
-   ============================================================ */
+/* MOBILE */
 
 @media (max-width: 768px) {
-  body {
-    font-size: 14px;
-  }
-
   .topbar {
-    flex-direction: column;
     align-items: flex-start;
-    gap: 0.75rem;
+    gap: 0.8em;
+    flex-direction: column;
   }
 
   .actions {
     width: 100%;
-    display: flex;
-    gap: 0.5rem;
     justify-content: space-between;
   }
 
-  .actions .btn {
-    flex: 1;
+  .tabs {
+    top: 105px;
   }
 
   .grid {
     display: flex;
     flex-direction: column;
-    gap: 0.8rem;
-  }
-
-  .grid-3 {
-    grid-template-columns: 1fr;
-  }
-
-  .input-field {
-    width: 100%;
-  }
-
-  .input-field input,
-  .input-field select,
-  .input-field textarea {
-    width: 100%;
-    font-size: 1rem;
-    padding: 0.7rem;
   }
 
   .row-actions {
     flex-direction: column;
-    gap: 0.65rem;
   }
 
   .btn {
     width: 100%;
-    border-radius: 10px;
-  }
-
-  .tabs {
-    overflow-x: auto;
-    white-space: nowrap;
-  }
-
-  .tab {
-    flex: 0 0 auto;
-  }
-
-  table.list {
-    font-size: 0.86em;
   }
 
   table.list th,
   table.list td {
+    font-size: 0.88em;
     padding: 0.45em;
-  }
-
-  .invm-header-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ============================================================
-   RESPONSIVE MOBILE
-   ============================================================ */
-
-@media (max-width: 600px) {
-  .container {
-    padding: 0.75em;
-  }
-
-  .brand-title {
-    font-size: 1em;
   }
 
   .brand-sub {
     display: none;
-  }
-
-  .brand-badge {
-    width: 34px;
-    height: 34px;
-  }
-
-  .card {
-    padding: 0.85em;
-    border-radius: 14px;
-  }
-
-  .kpi-value {
-    font-size: 1.55em;
-  }
-
-  table.list {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-  }
-
-  #invTable input {
-    min-width: 110px;
-  }
-
-  #smartSuggestions {
-    gap: 0.6rem;
-  }
-
-  .smart-choice {
-    padding: 0.75rem;
-  }
-
-  .footer {
-    font-size: 0.78em;
   }
 }
